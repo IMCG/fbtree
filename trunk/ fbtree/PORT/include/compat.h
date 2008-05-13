@@ -105,8 +105,6 @@ static int __sigtemp;		/* For the use of sigprocmask */
 		*(set) : sigblock(0))))),				\
 	((oset) ? (*(oset ? oset : set) = sigsetmask(__sigtemp)) :	\
 		sigsetmask(__sigtemp)), 0)
-#undef sigprocmask
-#define	sigprocmask(how, set, oset) 0
 #endif
 
 /*
