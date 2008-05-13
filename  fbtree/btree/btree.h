@@ -41,9 +41,11 @@
 #define	F_CLR(p, f)	(p)->flags &= ~(f)
 #define	F_ISSET(p, f)	((p)->flags & (f))
 
-#include <mpool.h>
-typedef u_int16_t indx_t;
-typedef u_int32_t recno_t;
+#include <sys/types.h>
+#include "../include/mpool.h"
+
+typedef void * caddr_t;
+
 #define	DEFMINKEYPAGE	(2)		/* Minimum keys per page */
 #define	MINCACHE	(5)		/* Minimum cached pages */
 #define	MINPSIZE	(512)		/* Minimum page size */

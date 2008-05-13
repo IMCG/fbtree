@@ -33,7 +33,7 @@
  *	@(#)mpool.h	8.2 (Berkeley) 7/14/94
  */
 
-#include <sys/queue.h>
+#include "../PORT/include/queue.h"
 
 /*
  * The memory pool scheme is a simple one.  Each in-memory page is referenced
@@ -44,7 +44,7 @@
  */
 #define	HASHSIZE	128
 #define	HASHKEY(pgno)	((pgno - 1) % HASHSIZE)
-typedef  u_int32_t pgno_t;
+
 /* The BKT structures are the elements of the queues. */
 typedef struct _bkt {
 	CIRCLEQ_ENTRY(_bkt) hq;		/* hash queue */
