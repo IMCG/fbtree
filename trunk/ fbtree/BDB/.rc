@@ -7,11 +7,12 @@ operation   2            # 0=READ , 1=OVERWRITE , 2=APPEND
 pagenum		1000		 # It means 244MB if you append 
 
 # configuration for testBT
-BTtestcase 		rnd.dat
-BTdatfile		test.bt
+BTtestcase 		seq.dat
+BTdatfile		/media/disk/test.bt
+#BTdatfile		test.bt
 BTmetafile		iTable
 BTrecordfile	btrecord
 
 BTpagesize		512
-BTrecordnum		3
+BTrecordnum		30000
 BTop			0			# 0 for insert, 1 for search

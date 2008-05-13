@@ -6,9 +6,7 @@ OBJ2=	bt_close.o bt_conv.o bt_debug.o bt_delete.o bt_get.o bt_open.o \
 	bt_utils.o
 OBJ3=	db.o
 OBJ4=	mpool.o
-OBJ5=	rec_close.o rec_delete.o rec_get.o rec_open.o rec_put.o rec_search.o \
-	rec_seq.o rec_utils.o
-
+OBJ5=
 MISC=
 
 ${LIBDB}: ${OBJ2} ${OBJ3} ${OBJ4} ${OBJ5} ${MISC}

@@ -37,7 +37,7 @@
 #define	_COMPAT_H_
 
 #include <sys/types.h>
-#define	NO_POSIX_SIGNALS
+
 /*
  * If your system doesn't typedef u_long, u_short, or u_char, change
  * the 0 to a 1.

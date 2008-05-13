@@ -32,7 +32,7 @@ void testBT(){
 	}
 }
     
-#define  DATABASE "test.bt" 
+ 
 void testInsert(){
 	
 	int rc;
@@ -46,7 +46,7 @@ void testInsert(){
     char buf[64];
     long long ibuf; 
 	/* Create the database. */
-    dbp=dbopen(DATABASE,O_CREAT|O_RDWR,0600, DB_BTREE ,NULL);
+    dbp=dbopen(config.BTdatfile,O_CREAT|O_RDWR,0600, DB_BTREE ,NULL);
 
 	/*
 	 * Insert records into the database, where the key is the user
