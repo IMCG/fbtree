@@ -270,7 +270,6 @@ parse(lbuf, argv, maxargc)
 }
 
 void
-append(db, argv)
 	DB *db;
 	char **argv;
 {

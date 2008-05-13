@@ -44,7 +44,9 @@
 #include <sys/types.h>
 #include "../include/mpool.h"
 
+#ifdef _WIN32
 typedef void * caddr_t;
+#endif
 
 #define	DEFMINKEYPAGE	(2)		/* Minimum keys per page */
 #define	MINCACHE	(5)		/* Minimum cached pages */

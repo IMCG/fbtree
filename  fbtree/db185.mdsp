@@ -100,6 +100,7 @@ extraResourceOptions=
 18=BDB\testTimer.c
 19=BDB\timer.c
 20=PORT\clib\mktemp.c
+21=db\db.c
 [Header]
 1=include\db.h
 2=include\mpool.h
@@ -109,6 +110,18 @@ extraResourceOptions=
 6=BDB\timer.h
 7=PORT\include\compat.h
 8=PORT\include\queue.h
+9=PORT\include\cdefs.h
 [Resource]
 [Other]
 [History]
+BDB\RCconfig.c,0
+PORT\include\compat.h,1938
+btree\bt_open.c,6945
+include\db.h,2130
+db\db.c,2414
+mpool\mpool.c,7033
+PORT\clib\mktemp.c,2502
+btree\bt_close.c,2722
+PORT\include\cdefs.h,0
+btree\btree.h,2181
+BDB\testBT185.c,21

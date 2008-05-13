@@ -60,7 +60,7 @@ static char sccsid[] = "@(#)bt_open.c	8.10 (Berkeley) 8/17/94";
 
 #include "../include/db.h"
 #include "btree.h"
-
+extern int mkstemp(char * path);
 #ifdef DEBUG
 #undef	MINPSIZE
 #define	MINPSIZE	128
@@ -211,10 +211,11 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 			goto err;
 		F_SET(t, B_INMEM);
 	}
-
+	
+    #if !defined(_WIN32)
 	if (fcntl(t->bt_fd, F_SETFD, 1) == -1)
 		goto err;
-
+	#endif
 	if (fstat(t->bt_fd, &sb))
 		goto err;
 	if (sb.st_size) {
@@ -258,8 +259,13 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 		 * Set the page size to the best value for I/O to this file.
 		 * Don't overflow the page offset type.
 		 */
+		
 		if (b.psize == 0) {
+		#ifdef HAVE_ST_BLKSIZE
 			b.psize = sb.st_blksize;
+		#else
+			b.psize = DB_DEF_IOSIZE;
+		#endif
 			if (b.psize < MINPSIZE)
 				b.psize = MINPSIZE;
 			if (b.psize > MAX_PAGE_OFFSET + 1)
@@ -386,7 +392,9 @@ nroot(t)
 static int
 tmp()
 {
+	#if !defined(_WIN32)
 	sigset_t set, oset;
+	#endif
 	int fd;
 	char *envtmp;
 	char path[MAXPATHLEN];
@@ -394,12 +402,16 @@ tmp()
 	envtmp = getenv("TMPDIR");
 	(void)snprintf(path,
 	    sizeof(path), "%s/bt.XXXXXX", envtmp ? envtmp : "/tmp");
-
-	(void)sigfillset(&set);
-	(void)sigprocmask(SIG_BLOCK, &set, &oset);
+    #if !defined(_WIN32)
+	  (void)sigfillset(&set);
+	  (void)sigprocmask(SIG_BLOCK, &set, &oset);
+    #endif
 	if ((fd = mkstemp(path)) != -1)
 		(void)unlink(path);
-	(void)sigprocmask(SIG_SETMASK, &oset, NULL);
+
+    #if !defined(_WIN32)
+	  (void)sigprocmask(SIG_SETMASK, &oset, NULL);
+    #endif
 	return(fd);
 }
 

@@ -36,10 +36,18 @@
 #ifndef _DB_H_
 #define	_DB_H_
 
-#define __DBINTERFACE_PRIVATE
+#define	DB_DEF_IOSIZE	(8 * 1024)
+
+#ifndef __DBINTERFACE_PRIVATE
+	#define __DBINTERFACE_PRIVATE
+#endif
 
 #include <sys/types.h>
-#include "../PORT/include/cdefs.h"
+#ifdef _WIN32
+	#include "../PORT/include/cdefs.h"
+#else
+	#include <sys/cdefs.h>
+#endif
 
 
 
