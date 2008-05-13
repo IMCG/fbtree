@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)db.c	8.4 (Berkeley) 2/21/94";
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <db.h>
+#include "../include/db.h"
 
 DB *
 dbopen(fname, flags, mode, type, openinfo)

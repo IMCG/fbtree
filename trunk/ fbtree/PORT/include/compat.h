@@ -37,12 +37,12 @@
 #define	_COMPAT_H_
 
 #include <sys/types.h>
-
+#define	NO_POSIX_SIGNALS
 /*
  * If your system doesn't typedef u_long, u_short, or u_char, change
  * the 0 to a 1.
  */
-#if 0
+#if 1
 typedef unsigned char	u_char;		/* 4.[34]BSD names. */
 typedef unsigned int	u_int;
 typedef unsigned long	u_long;
@@ -105,6 +105,8 @@ static int __sigtemp;		/* For the use of sigprocmask */
 		*(set) : sigblock(0))))),				\
 	((oset) ? (*(oset ? oset : set) = sigsetmask(__sigtemp)) :	\
 		sigsetmask(__sigtemp)), 0)
+#undef sigprocmask
+#define	sigprocmask(how, set, oset) 0
 #endif
 
 /*
