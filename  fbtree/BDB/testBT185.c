@@ -6,7 +6,6 @@
 #include "RCconfig.h"
 #include "timer.h"
 
-
 extern void sqlite3Randomness(int N, void *pBuf);
 
 void testInsert();
@@ -47,7 +46,10 @@ void testInsert(){
     long long ibuf; 
 	/* Create the database. */
     dbp=dbopen(config.BTdatfile,O_CREAT|O_RDWR,0600, DB_BTREE ,NULL);
-
+	if(!dbp){
+		printf("can't open file");
+		exit(-1);
+	}
 	/*
 	 * Insert records into the database, where the key is the user
 	 * input and the data is the user input in reverse order.
