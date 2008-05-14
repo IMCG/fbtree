@@ -40,12 +40,13 @@ static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/4/93";
 
 #include <sys/param.h>
 #include <fcntl.h>
-#include <db.h>
 #include <errno.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include "db.h"
 #include "btree.h"
 
 typedef struct cmd_table {
@@ -240,7 +241,7 @@ user(db)
 uselast:	last = i;
 		(*commands[i].func)(db, argv);
 	}
-	if ((db->sync)(db) == RET_ERROR)
+	if ((db->sync)(db,0) == RET_ERROR)
 		perror("dbsync");
 	else if ((db->close)(db) == RET_ERROR)
 		perror("dbclose");
@@ -270,6 +271,7 @@ parse(lbuf, argv, maxargc)
 }
 
 void
+append(db,argv)
 	DB *db;
 	char **argv;
 {
@@ -285,7 +287,7 @@ void
 	key.size = sizeof(recno_t);
 	data.data = argv[2];
 	data.size = strlen(data.data);
-	status = (db->put)(db, &key, &data, R_APPEND);
+	status = (db->put)(db, &key, &data, R_NOOVERWRITE);
 	switch (status) {
 	case RET_ERROR:
 		perror("append/put");
@@ -613,7 +615,7 @@ load(db, argv)
 	recno_t cnt;
 	size_t len;
 	int status;
-	char *lp, buf[16 * 1024];
+	char lp[16*1024], buf[16 * 1024];
 
 	BUGdb = db;
 	if ((fp = fopen(argv[1], "r")) == NULL) {
@@ -622,7 +624,7 @@ load(db, argv)
 	}
 	(void)printf("loading %s...\n", argv[1]);
 
-	for (cnt = 1; (lp = fgetline(fp, &len)) != NULL; ++cnt) {
+	for (cnt = 1; (getline(&lp, &len,fp)) != 0; ++cnt) {
 		if (recno) {
 			key.data = &cnt;
 			key.size = sizeof(recno_t);

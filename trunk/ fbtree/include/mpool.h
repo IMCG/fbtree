@@ -33,6 +33,14 @@
  *	@(#)mpool.h	8.2 (Berkeley) 7/14/94
  */
 
+#ifndef DEBUG
+    #define DEBUG
+#endif
+#ifndef STATISTICS
+    #define STATISTICS
+#endif
+
+#include "db.h"
 #include "../PORT/include/queue.h"
 
 /*

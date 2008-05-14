@@ -71,7 +71,7 @@ test1()
 			echo g
 			echo k$i
 		done > $TMP2
-		$PROG -o $TMP3 $type $TMP2
+		sudo $PROG -o $TMP3 $type $TMP2
 		if (cmp -s $TMP1 $TMP3) ; then :
 		else
 			echo "test1: type $type: failed"

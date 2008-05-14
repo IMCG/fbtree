@@ -45,12 +45,12 @@ static char sccsid[] = "@(#)mpool.c	8.5 (Berkeley) 7/26/94";
 #include <string.h>
 #include <unistd.h>
 
-#include "../include/db.h"
+#include "db.h"
 #ifdef _WIN32
 #define	fsync(fd)	_commit(fd)
 #endif
 #define	__MPOOLINTERFACE_PRIVATE
-#include "../include/mpool.h"
+#include "mpool.h"
 
 static BKT *mpool_bkt __P((MPOOL *));
 static BKT *mpool_look __P((MPOOL *, pgno_t));
