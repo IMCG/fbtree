@@ -32,6 +32,12 @@
  *
  *	@(#)extern.h	8.10 (Berkeley) 7/20/94
  */
+#ifndef DEBUG
+    #define DEBUG
+#endif
+#ifndef STATISTICS
+    #define STATISTICS
+#endif
 
 int	 __bt_close __P((DB *));
 int	 __bt_cmp __P((BTREE *, const DBT *, EPG *));

@@ -42,7 +42,7 @@
 #define	F_ISSET(p, f)	((p)->flags & (f))
 
 #include <sys/types.h>
-#include "../include/mpool.h"
+#include "mpool.h"
 
 #ifdef _WIN32
 typedef void * caddr_t;
