@@ -44,7 +44,7 @@
 
 #include <sys/types.h>
 #ifdef _WIN32
-	#include "../PORT/include/cdefs.h"
+	#include "cdefs.h"
 #else
 	#include <sys/cdefs.h>
 #endif
@@ -52,7 +52,7 @@
 
 
 #ifdef __DBINTERFACE_PRIVATE
-#include "../PORT/include/compat.h"
+#include "compat.h"
 #endif
 
 #define	RET_ERROR	-1		/* Return values. */
@@ -133,7 +133,7 @@ typedef struct __db {
 	int (*put)	__P((const struct __db *, DBT *, const DBT *, u_int));
 	int (*seq)	__P((const struct __db *, DBT *, DBT *, u_int));
 	int (*sync)	__P((const struct __db *, u_int));
-	void *internal;			/* Access method private. */
+	void *internal;			/* Access method private. @mx TODO ? */
 	int (*fd)	__P((const struct __db *));
 } DB;
 

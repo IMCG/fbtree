@@ -74,6 +74,10 @@ typedef struct _page {
 	pgno_t	prevpg;			/* left sibling */
 	pgno_t	nextpg;			/* right sibling */
 
+/* 
+ * @mx only one bit of the type's value is set to 1, so you can use (flags & P_BLEAF) to 
+ * test whether (flags==P_BLEAF). Hack for effecient? 
+ */
 #define	P_BINTERNAL	0x01		/* btree internal page */
 #define	P_BLEAF		0x02		/* leaf page */
 #define	P_OVERFLOW	0x04		/* overflow page */
@@ -109,6 +113,8 @@ typedef struct _page {
  * The page number and size fields in the items are pgno_t-aligned so they can
  * be manipulated without copying.  (This presumes that 32 bit items can be
  * manipulated on this system.)
+ *
+ * @mx LALIGN(n) length of align ?
  */
 #define	LALIGN(n)	(((n) + sizeof(pgno_t) - 1) & ~(sizeof(pgno_t) - 1))
 #define	NOVFLSIZE	(sizeof(pgno_t) + sizeof(u_int32_t))
@@ -242,6 +248,8 @@ typedef struct _rleaf {
  * record less than key in the tree so that descents work.  Leaf page searches
  * must find the smallest record greater than key so that the returned index
  * is the record's correct position for insertion.
+ *
+ * @mx strange name?
  */
 typedef struct _epgno {
 	pgno_t	pgno;			/* the page number */
@@ -323,7 +331,7 @@ typedef struct _btree {
 }
 #define	BT_POP(t)	(t->bt_sp == t->bt_stack ? NULL : --t->bt_sp)
 #define	BT_CLR(t)	(t->bt_sp = t->bt_stack)
-	EPGNO	  bt_stack[50];		/* stack of parent pages */
+	EPGNO	  bt_stack[50];		/* stack of parent pages */ /* @mx we need to go back when we try to split the node */
 	EPGNO	 *bt_sp;		/* current stack pointer */
 
 	DBT	  bt_rkey;		/* returned key */
