@@ -58,6 +58,8 @@ static char sccsid[] = "@(#)bt_get.c	8.6 (Berkeley) 7/20/94";
  *
  * Returns:
  *	RET_ERROR, RET_SUCCESS and RET_SPECIAL if the key not found.
+ *
+ * @mx the internal work is implemented by __bt_search(), it construct (key,data) pair from EPG (the return value of __bt_search)
  */
 int
 __bt_get(dbp, key, data, flags)
@@ -71,8 +73,8 @@ __bt_get(dbp, key, data, flags)
 	int exact, status;
 
 	t = dbp->internal;
-
-	/* Toss any page pinned across calls. */
+    
+	/* Toss any page pinned across calls. */ /*@mx why? Initialize to zero */
 	if (t->bt_pinned != NULL) {
 		mpool_put(t->bt_mp, t->bt_pinned, 0);
 		t->bt_pinned = NULL;
