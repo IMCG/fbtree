@@ -3,16 +3,15 @@
  * = Section 1. Node Translation Table =
  * ----
  */
-struct _listentry{
+typedef struct _sectorlist{
     pgno_t pgno;
-    LIST_ENTRY(pgno_t) entries;
-};
-
+    struct list_head list;
+}SectorList;
 typedef struct _NTTentry{
     bool        isLeaf;
     u_int32_t   logVersion;
-    LISTHEAD(_listhead,_listentry) sectorList; 
-}NTTENTRY;
+    SectorList  list;
+}NTTEntry;
 
 /*use an arry to implement NTT first*/
 static NTTEntry[] NTT;
@@ -38,6 +37,32 @@ typedef struct _binternal_log{
 	u_int32_t	flags;
 	char	bytes[1];		/* data */
 }BINTERNAL_LOG;
+/* Get the page's BINTERNAL_LOG structure at index indx. */
+#define	GETBINTERNAL_LOG(pg, indx)						\
+	((BINTERNAL_LOG *)((char *)(pg) + (pg)->linp[indx]))
+
+/* Get the number of bytes in the entry. */
+#define NBINTERNAL_LOG(len)							\
+	LALIGN(sizeof(u_int32_t) + 2*sizeof(pgno_t) + 3*sizeof(u_int32_t) + (len))
+
+/* Copy a BINTERNAL_LOG entry to the page. */
+#define	WR_BINTERNAL_LOG(p, binternal) {				\
+	*(u_int32_t *)p = binternal->ksize;			\
+	p += sizeof(u_int32_t);						\
+	*(pgno_t *)p = binternal->nodeID;			\
+	p += sizeof(pgno_t);						\
+	*(pgno_t *)p = binternal->pgno;				\
+	p += sizeof(pgno_t);						\
+	*(pgno_t *)p = binternal->seqnum;			\
+	p += sizeof(u_int32_t);						\
+	*(pgno_t *)p = binternal->logVersion;		\
+	p += sizeof(u_int32_t);						\
+	*(u_char *)p = flags;						\
+	p += sizeof(u_int32_t);						\
+    strncpy((char*)p, binternal->bytes, binternal->ksize);  \
+}
+
+
 
 /* NOT used at current time */
 #if 0 

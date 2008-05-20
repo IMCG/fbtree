@@ -8,15 +8,119 @@
 
 static int __bt_snext __P((BTREE *, PAGE *, const DBT *, int *));
 static int __bt_sprev __P((BTREE *, PAGE *, const DBT *, int *));
+typedef struct _loglist{
+    BINTERNAL_LOG* log;
+    struct list_head list;
+}LogList;
+
 /*
- * read a node
+ * read Node[x]
  *
  */
-read_node(NodeID x){
-    NTT[x]
+PAGE* ReadNode(MPOOL*mp , pgno_t x){
+    int mode = __NTT_mode(x);
+    int version;    /* latest version of current node */
+    
+    PAGE *h;
+    pgno_t pg;
+    
+    SectorList* head;
+    SectorList* slist;
+    
+    BINTERNAL_LOG * bi_log;
+    LogList logCollector;
+    
+    INIT_LIST_HEAD(&logCollector.head);
+    if(mode==DISK){
+        h = mpool_get(mp,x,0);
+        return h;
+    }
+    else if(mode==LOG){
+
+        version = __NTT_getVersion(x);
+        head = __NTT_getSectorList(x);
+        
+        // iterate the list
+        list_for_each_entry(slist , &(head->list) , list ){
+            
+            // get the PAGE(pgno)
+            h = mpool_get(mp,slist->pgno,0);
+            if( h==NULL ){
+                // XXX error handling
+                return NULL;
+            }
+            
+            // iterate the page to collect entry in this page
+            for(i =0 ; i<lim ; i++){
+                // get the log entry
+                bi_log = GETBINTERNAL_LOG(slist->pgno,i);
+                // if it belongs to the node x , collect it
+                if( bi_log->nodeID==x){
+                    __log_collect(&logCollector,bi_log);
+                }
+            }
+            mpool_put(mp,h,0);
+        }
+        // construct the actual node of the page
+        return rebuildNode(&logCollector);
+    }
+    else{
+       fprintf(stderr,"error , unknown mode\n");
+       exit(-1);
+    }
+
+
 
 }
+/*
+ * add bi_log into the log list "logCollector"
+ */
+void __log_collect( LogList* logCollector, BINTERNAL_LOG* bi_log){
+    LogList* tmp = (LogList*)malloc(sizeof(LogList));
+    BINTERNAL_LOG * bi = (BINTERNAL_LOG*)malloc(NBINTERNAL_LOG(bi_log->ksize));
+    WR_BINTERNAL_LOG(bi,bi_log);
+    tmp->log = bi;
+    list_add(&(tmp->list),&(logCollector->list));
 
+}
+/** 
+ * rebuildNode - construct the real node from the log entry list
+ * @logCollector: the log list of collect log entries
+ */
+PAGE* rebuildNode(LogList* head){
+    pgno_t npg;
+    LogList* entry;
+    BINTERNAL_LOG* log;
+    // sort the log entry by seqnum
+    
+    // create a new node
+    PAGE* newNode=__bt_new(t,&npg);
+    if(newNode==NULL){
+        fprintf(stderr,"can't create new node.\n");
+        return (NULL);
+    }
+	newNode->pgno = npg;
+	newNode->nextpg = r->pgno;
+	newNode->prevpg = h->prevpg;
+	newNode->lower = BTDATAOFF;
+	newNode->upper = t->bt_psize;
+	newNode->flags = h->flags & P_TYPE;
+    // apply the log entries to construc a node
+    list_for_each_entry(entry,&(head->list),list){
+        log = entry->log;
+        assert(!( (log & BIGKEY) | (log & BIGDATA)));
+        if(log & ADD_KEY){
+           // TODO 
+        }
+        else if(log & DELETE_KEY){
+        }
+        else if(log & UPDATE_POINTER){
+        }
+    }
+
+    
+    return newNode;
+} 
 
 /*
  * __bt_search --
@@ -50,7 +154,8 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 
 	BT_CLR(t);  /* @mx it initializes t->bt_sp  */
 	for (pg = P_ROOT;;) {
-        if ((h = mpool_get(t->bt_mp, pg, 0)) == NULL)
+        h = readNode(t->bt_mp,pg);
+        if(h==NULL)
 			return (NULL);
 
 		/* Do a binary search on the current page. */
