@@ -80,6 +80,8 @@ __bt_free(t, h)
  *
  * Returns:
  *	Pointer to a page, NULL on error.
+ * 
+ * @mx XXX why not set h->pgno directly
  */
 PAGE *
 __bt_new(t, npg)

@@ -71,6 +71,7 @@ typedef void * caddr_t;
  */
 typedef struct _page {
 	pgno_t	pgno;			/* this page's page number */
+    /* @mx XXX why we need it */
 	pgno_t	prevpg;			/* left sibling */
 	pgno_t	nextpg;			/* right sibling */
 
@@ -343,7 +344,7 @@ typedef struct _btree {
 	u_int32_t bt_psize;		/* page size */
 	indx_t	  bt_ovflsize;		/* cut-off for key/data overflow */
 	int	  bt_lorder;		/* byte order */
-					/* sorted order */
+					/* sorted order @mx XXX ? */
 	enum { NOT, BACK, FORWARD } bt_order;
 	EPGNO	  bt_last;		/* last insert */
 
