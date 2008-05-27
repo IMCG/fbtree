@@ -43,11 +43,15 @@ void testInsert(){
 	DB *dbp;
 	DBT key, data;
     char buf[64];
-    long long ibuf; 
+    long long ibuf;
+    if(!fp){
+		printf("can't open file %s\n", config.BTtestcase);
+		exit(-1);
+    }
 	/* Create the database. */
     dbp=dbopen(config.BTdatfile,O_CREAT|O_RDWR,0600, DB_BTREE ,NULL);
 	if(!dbp){
-		printf("can't open file");
+		printf("can't open file %s\n", config.BTdatfile);
 		exit(-1);
 	}
 	/*

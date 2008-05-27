@@ -79,13 +79,7 @@ u_long	bt_rootsplit, bt_split, bt_sortsplit, bt_pfxsaved;
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__bt_split(t, sp, key, data, flags, ilen, argskip)
-	BTREE *t;
-	PAGE *sp;
-	const DBT *key, *data;
-	int flags;
-	size_t ilen;
-	u_int32_t argskip;
+__bt_split_st(BTREE *t, PAGE *sp, const DBT *key, *data, int flags, size_t ilen, u_int32_t argskip)
 {
 	BINTERNAL *bi;
 	BLEAF *bl, *tbl;
@@ -97,21 +91,26 @@ __bt_split(t, sp, key, data, flags, ilen, argskip)
 	u_int32_t n, nbytes, nksize;
 	int parentsplit;
 	char *dest;
+    int mode; /* mode of current node */
 
-	/*
+	skip = argskip; /* @mx why not use argskip directly ? */
+	/* ----
+     * = Step 1. create a new node 'r' =
+     * ----
 	 * Split the page into two pages, l and r.  The split routines return
 	 * a pointer to the page into which the key should be inserted and with
 	 * skip set to the offset which should be used.  Additionally, l and r
 	 * are pinned.
 	 */
-	skip = argskip;
 	h = sp->pgno == P_ROOT ?
 	    bt_root(t, sp, &l, &r, &skip, ilen) :
 	    bt_page(t, sp, &l, &r, &skip, ilen);
 	if (h == NULL)
 		return (RET_ERROR);
 
-	/*
+	/* ----
+     * = Step 2. insert new key/data pair into leaf =
+     * ----
 	 * Insert the new key/data pair into the leaf page.  (Key inserts
 	 * always cause a leaf page to split first.)
 	 */
@@ -128,7 +127,10 @@ __bt_split(t, sp, key, data, flags, ilen, argskip)
 	    bt_rroot(t, sp, l, r) : bt_broot(t, sp, l, r)) == RET_ERROR)
 		goto err2;
 
-	/*
+	/* ----
+     * = Step 3. update parent node's pointer or split parent node if necessary =
+     * ----
+     * {{{
 	 * Now we walk the parent page stack -- a LIFO stack of the pages that
 	 * were traversed when we searched for the page that split.  Each stack
 	 * entry is a page number and a page index offset.  The offset is for
@@ -150,24 +152,32 @@ __bt_split(t, sp, key, data, flags, ilen, argskip)
 	 * and the root page or the overflow key page when calling bt_preserve.
 	 * This code must make sure that all pins are released other than the
 	 * root page or overflow page which is unlocked elsewhere.
+     * }}}
 	 */
 	while ((parent = BT_POP(t)) != NULL) {
-		lchild = l;
+        /* @mx XXX set the mode of the current page */
+        mode = 0;
+		
+        lchild = l;
 		rchild = r;
-
+        
+	    /* ----
+         * == Step 3.1. get the parent page and calculate the space needed on the parent page. ==
+         * ----
+         */
 		/* Get the parent page. */
 		if ((h = mpool_get(t->bt_mp, parent->pgno, 0)) == NULL)
-			goto err2;
+            goto err2;
 
-	 	/*
-		 * The new key goes ONE AFTER the index, because the split
+        /*
+         * The new key goes ONE AFTER the index, because the split
 		 * was to the right.
 		 */
 		skip = parent->index + 1;
 
 		/*
-		 * Calculate the space needed on the parent page.
-		 *
+         * Calculate the space needed on the parent page. 
+		 * {{{
 		 * Prefix trees: space hack when inserting into BINTERNAL
 		 * pages.  Retain only what's needed to distinguish between
 		 * the new entry and the LAST entry on the page to its left.
@@ -178,12 +188,14 @@ __bt_split(t, sp, key, data, flags, ilen, argskip)
 		 * ONLY to internal pages that have leaf pages as children.
 		 * Further reduction of the key between pairs of internal
 		 * pages loses too much information.
+         * }}}  
 		 */
 		switch (rchild->flags & P_TYPE) {
 		case P_BINTERNAL:
 			bi = GETBINTERNAL(rchild, 0);
 			nbytes = NBINTERNAL(bi->ksize);
 			break;
+        /* @mx TODO parent node is leaf? it seems strange */
 		case P_BLEAF:
 			bl = GETBLEAF(rchild, 0);
 			nbytes = NBINTERNAL(bl->ksize);
@@ -213,8 +225,14 @@ __bt_split(t, sp, key, data, flags, ilen, argskip)
 		default:
 			abort();
 		}
+             
+	    /* ----
+         * == Step 3.2. insert new key to the parent page ==
+         * ----
+		 * Split the parent page if necessary or shift the indices. 
+         */
 
-		/* Split the parent page if necessary or shift the indices. */
+        /* === Case 1. Split the parent page === */
 		if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
 			sp = h;
 			h = h->pgno == P_ROOT ?
@@ -223,12 +241,16 @@ __bt_split(t, sp, key, data, flags, ilen, argskip)
 			if (h == NULL)
 				goto err1;
 			parentsplit = 1;
-		} else {
-			if (skip < (nxtindex = NEXTINDEX(h)))
-				memmove(h->linp + skip + 1, h->linp + skip,
-				    (nxtindex - skip) * sizeof(indx_t));
-			h->lower += sizeof(indx_t);
-			parentsplit = 0;
+		} 
+        /* === Case 2. shift the indices. === */
+        // TODO we just construct all the logs to make it simple first
+        else {
+            if (skip < (nxtindex = NEXTINDEX(h)))
+                memmove(h->linp + skip + 1, h->linp + skip,
+                    (nxtindex - skip) * sizeof(indx_t));
+            h->lower += sizeof(indx_t);
+			
+            parentsplit = 0;
 		}
 
 		/* Insert the key into the parent page. */
@@ -249,8 +271,10 @@ __bt_split(t, sp, key, data, flags, ilen, argskip)
 			    bt_preserve(t, *(pgno_t *)bl->bytes) == RET_ERROR)
 				goto err1;
 			break;
+#if 0
+//{{{
 		case P_RINTERNAL:
-			/*
+            /*
 			 * Update the left page count.  If split
 			 * added at index 0, fix the correct page.
 			 */
@@ -285,13 +309,25 @@ __bt_split(t, sp, key, data, flags, ilen, argskip)
 			((RINTERNAL *)dest)->nrecs = NEXTINDEX(rchild);
 			((RINTERNAL *)dest)->pgno = rchild->pgno;
 			break;
+//}}}
+#endif
 		default:
 			abort();
 		}
 
 		/* Unpin the held pages. */
+        /* @mx parent is not splited, you only need to add a signle log entry */
 		if (!parentsplit) {
-			mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+            if(mode == BT_DISK){
+			    mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+            }
+            else if(mode == BT_LOG){
+                bi = disk2log_bi(dest,NTT_getMaxSeq()++,NTT_getLogVersion());
+                logpool_put(t,bi);
+            }
+            else{
+                err_exit("unknown mode!");
+            }
 			break;
 		}
 
@@ -300,6 +336,10 @@ __bt_split(t, sp, key, data, flags, ilen, argskip)
 		    (F_ISSET(t, R_RECNO) ?
 		    bt_rroot(t, sp, l, r) : bt_broot(t, sp, l, r)) == RET_ERROR)
 			goto err1;
+
+        if(mode == BT_LOG){
+            genLogFromNode(h);
+        }
 
 		mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
 		mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
@@ -340,14 +380,12 @@ err2:	mpool_put(t->bt_mp, l, 0);
  * Returns:
  *	Pointer to page in which to insert or NULL on error.
  * 
- * @mx split page h into (h,r), h is just for tmp use
+ * @mx split page h into (h,r), l is just for tmp use
+ *	*lp = h;
+ *	*rp = r;
  */
 static PAGE *
-bt_page(t, h, lp, rp, skip, ilen)
-	BTREE *t;
-	PAGE *h, **lp, **rp;
-	indx_t *skip;
-	size_t ilen;
+bt_page_st ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 {
 	PAGE *l, *r, *tp;
 	pgno_t npg;
@@ -355,6 +393,11 @@ bt_page(t, h, lp, rp, skip, ilen)
 #ifdef STATISTICS
 	++bt_split;
 #endif
+    
+	/* ----
+     * = Strp 1. create a new node  =
+     * ----
+     */
 	/* Put the new right page for the split into place. */
 	if ((r = __bt_new(t, &npg)) == NULL)
 		return (NULL);
@@ -364,9 +407,18 @@ bt_page(t, h, lp, rp, skip, ilen)
 	r->nextpg = h->nextpg;
 	r->prevpg = h->pgno;
 	r->flags = h->flags & P_TYPE;
-
-	/*
-	 * If we're splitting the last page on a level because we're appending
+    
+	/* ----
+     * = Step 2. split node h =
+     * ----
+     */
+    /*
+     * ==  Case 1: rightmost page and rightmost index  ==
+     * {{{
+     * Log Mode:
+     *  there's nothing to do here
+     * Disk Mode:
+	 *  If we're splitting the last page on a level because we're appending
 	 * a key to it (skip is NEXTINDEX()), it's likely that the data is
 	 * sorted.  Adding an empty page on the side of the level is less work
 	 * and can push the fill factor much higher than normal.  If we're
@@ -386,7 +438,12 @@ bt_page(t, h, lp, rp, skip, ilen)
 		*rp = r;
 		return (r);
 	}
+    //}}}
 
+    /* 
+     * == Case 2: normal case ==
+     * @mx Note: l is just for tmp usage, so we don't use __bt_new, instead we just use malloc and then free it
+     */
 	/* Put the new left page for the split into place. */
 	if ((l = (PAGE *)malloc(t->bt_psize)) == NULL) {
 		mpool_put(t->bt_mp, r, 0);
@@ -401,13 +458,12 @@ bt_page(t, h, lp, rp, skip, ilen)
 	l->lower = BTDATAOFF;
 	l->upper = t->bt_psize;
 	l->flags = h->flags & P_TYPE;
-
 	/* Fix up the previous pointer of the page after the split page. */
 	if (h->nextpg != P_INVALID) {
 		if ((tp = mpool_get(t->bt_mp, h->nextpg, 0)) == NULL) {
 			free(l);
 			/* XXX mpool_free(t->bt_mp, r->pgno); */
-			return (NULL);
+            return (NULL);
 		}
 		tp->prevpg = r->pgno;
 		mpool_put(t->bt_mp, tp, MPOOL_DIRTY);
@@ -420,13 +476,20 @@ bt_page(t, h, lp, rp, skip, ilen)
 	 * the left page in place.  Since the left page can't change, we have
 	 * to swap the original and the allocated left page after the split.
      *
+     * @mx tp = 'l' OR 'r'
 	 */
+    //XXX
 	tp = bt_psplit(t, h, l, r, skip, ilen);
 
 	/* Move the new left page onto the old left page. */
 	memmove(h, l, t->bt_psize);
-	if (tp == l)
+	if (tp == l){
 		tp = h;
+        genLogFromNode(r);
+    }
+    else{  /* tp==r  */
+        genLogFromNode(l);
+    }
 	free(l);
 
 	*lp = h;
@@ -447,9 +510,11 @@ bt_page(t, h, lp, rp, skip, ilen)
  *
  * Returns:
  *	Pointer to page in which to insert or NULL on error.
+ * 
+ * @mx XXX not modifed yet
  */
 static PAGE *
-bt_root(t, h, lp, rp, skip, ilen)
+bt_root_st(t, h, lp, rp, skip, ilen)
 	BTREE *t;
 	PAGE *h, **lp, **rp;
 	indx_t *skip;
@@ -500,6 +565,8 @@ bt_rroot(t, h, l, r)
 	BTREE *t;
 	PAGE *h, *l, *r;
 {
+#if 0
+    //{{{
 	char *dest;
 
 	/* Insert the left and right keys, set the header information. */
@@ -519,7 +586,8 @@ bt_rroot(t, h, l, r)
 	h->flags &= ~P_TYPE;
 	h->flags |= P_RINTERNAL;
 	mpool_put(t->bt_mp, h, MPOOL_DIRTY);
-
+    //}}}
+#endif
 	return (RET_SUCCESS);
 }
 
@@ -534,6 +602,9 @@ bt_rroot(t, h, l, r)
  *
  * Returns:
  *	RET_ERROR, RET_SUCCESS
+ * 
+ * @mx the reason why we need to fix it is that you need to rebuild the root's content
+ * it's differnt from normal situation that we only need to update parent node
  */
 static int
 bt_broot(t, h, l, r)

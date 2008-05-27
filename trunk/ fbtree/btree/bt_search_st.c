@@ -31,11 +31,11 @@ PAGE* ReadNode(MPOOL*mp , pgno_t x){
     LogList logCollector;
     
     INIT_LIST_HEAD(&logCollector.head);
-    if(mode==DISK){
+    if(mode==BT_DISK){
         h = mpool_get(mp,x,0);
         return h;
     }
-    else if(mode==LOG){
+    else if(mode==BT_LOG){
 
         version = __NTT_getVersion(x);
         head = __NTT_getSectorList(x);
@@ -46,8 +46,8 @@ PAGE* ReadNode(MPOOL*mp , pgno_t x){
             // get the PAGE(pgno)
             h = mpool_get(mp,slist->pgno,0);
             if( h==NULL ){
-                // XXX error handling
-                return NULL;
+                // TODO error handling
+                err_exit("can't get page");
             }
             
             // iterate the page to collect entry in this page
@@ -158,6 +158,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
         if(h==NULL)
 			return (NULL);
 
+        /* @mx TODO not so clear about the binary search */
 		/* Do a binary search on the current page. */
 		t->bt_cur.page = h;
 		for (base = 0, lim = NEXTINDEX(h); lim; lim >>= 1) {

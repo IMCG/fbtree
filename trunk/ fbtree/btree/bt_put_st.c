@@ -49,7 +49,12 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 		errno = EPERM;
 		return (RET_ERROR);
 	}
+    //XXX deal with big data/key and R_CURSOR
+	assert (!(key->size + data->size > t->bt_ovflsize));
+	assert (!(flags == R_CURSOR));
 
+#if 0
+//{{{
 	switch (flags) {
 	case 0:
 	case R_NOOVERWRITE:
@@ -69,11 +74,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 		return (RET_ERROR);
 	}
 
-    
-    //XXX deal with big data/key and R_CURSOR
-	assert (!(key->size + data->size > t->bt_ovflsize));
-	assert (!(flags == R_CURSOR));
-#if 0
+
 	/*
 	 * If the key/data pair won't fit on a page, store it on overflow
 	 * pages.  Only put the key on the overflow page if the pair are
@@ -82,7 +83,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	 * XXX
 	 * If the insert fails later on, the overflow pages aren't recovered.
 	 */
-	dflags = 0;
+	dflags = 0; /* @mx data flag to indicate BIGKEY or BIGDATA */
 	if (key->size + data->size > t->bt_ovflsize) {
 		if (key->size > t->bt_ovflsize) {
 storekey:		if (__ovfl_put(t, key, &pg) == RET_ERROR)
@@ -117,18 +118,26 @@ storekey:		if (__ovfl_put(t, key, &pg) == RET_ERROR)
 		index = t->bt_cursor.pg.index;
 		goto delete;
 	}
+//}}}
 #endif
-	/*
+
+	/* ----
+     * = Step 1. find Key(index) =< key < Key(index+1) =
+     * ----
 	 * Find the key to delete, or, the location at which to insert.
 	 * Bt_fast and __bt_search both pin the returned page.
+     *
+     * @mx TODO bt_fast {FORWARD,BACK}?
 	 */
 	if (t->bt_order == NOT || (e = bt_fast(t, key, data, &exact)) == NULL)
-		if ((e = __bt_search(t, key, &exact)) == NULL)
+		if ((e = __bt_search_st(t, key, &exact)) == NULL)
 			return (RET_ERROR);
 	h = e->page;
 	index = e->index;
 
-	/*
+	/* ----
+     * = Step 2. Insert key/data into the tree =
+     * ----
 	 * Add the key/data pair to the tree.  If an identical key is already
 	 * in the tree, and R_NOOVERWRITE is set, an error is returned.  If
 	 * R_NOOVERWRITE is not set, the key is either added (if duplicates are
@@ -143,6 +152,8 @@ storekey:		if (__ovfl_put(t, key, &pg) == RET_ERROR)
 	default:
 		if (!exact || !F_ISSET(t, B_NODUPS))
 			break;
+#if 0
+//{{{
 		/*
 		 * !!!
 		 * Note, the delete may empty the page, so we need to put a
@@ -153,9 +164,11 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 			return (RET_ERROR);
 		}
 		break;
+//}}}
+#endif
 	}
 
-	/*
+	/* == Case 1. split if not enough room == 
 	 * If not enough room, or the user has put a ceiling on the number of
 	 * keys permitted in the page, split the page.  The split code will
 	 * insert the key and data and unpin the current page.  If inserting
@@ -163,12 +176,15 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 	 */
 	nbytes = NBLEAFDBT(key->size, data->size);
 	if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
-		if ((status = __bt_split(t, h, key,
+		if ((status = __bt_split_st(t, h, key,
 		    data, dflags, nbytes, index)) != RET_SUCCESS)
 			return (status);
 		goto success;
 	}
-
+    /* == Case 2. directly insert if enough room == 
+     * @mx XXX
+     * leaf is always in disk mode here
+     */
 	if (index < (nxtindex = NEXTINDEX(h)))
 		memmove(h->linp + index + 1, h->linp + index,
 		    (nxtindex - index) * sizeof(indx_t));
@@ -178,12 +194,18 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 	dest = (char *)h + h->upper;
 	WR_BLEAF(dest, key, data, dflags);
 
+#if 0
+//{{{
+    /* @mx XXX cursor is not used currently */
 	/* If the cursor is on this page, adjust it as necessary. */
 	if (F_ISSET(&t->bt_cursor, CURS_INIT) &&
 	    !F_ISSET(&t->bt_cursor, CURS_ACQUIRE) &&
 	    t->bt_cursor.pg.pgno == h->pgno && t->bt_cursor.pg.index >= index)
 		++t->bt_cursor.pg.index;
-
+//}}}
+#endif
+    
+    // @mx TODO not so clear about it
 	if (t->bt_order == NOT)
 		if (h->nextpg == P_INVALID) {
 			if (index == NEXTINDEX(h) - 1) {
@@ -202,8 +224,10 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 	mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 
 success:
+#if 0
 	if (flags == R_SETCURSOR)
 		__bt_setcur(t, e->page->pgno, e->index);
+#endif
 
 	F_SET(t, B_MODIFIED);
 	return (RET_SUCCESS);
@@ -233,6 +257,7 @@ bt_fast(t, key, data, exactp)
 	u_int32_t nbytes;
 	int cmp;
 
+    // @mx bt_last : last insert's pgno
 	if ((h = mpool_get(t->bt_mp, t->bt_last.pgno, 0)) == NULL) {
 		t->bt_order = NOT;
 		return (NULL);
