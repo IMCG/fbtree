@@ -8,11 +8,11 @@ pagenum		1000		 # It means 244MB if you append
 
 # configuration for testBT
 BTtestcase 		seq.dat
-BTdatfile		/media/disk/test.bt
+BTdatfile		test.bt
 #BTdatfile		test.bt
 BTmetafile		iTable
 BTrecordfile	btrecord
 
 BTpagesize		512
-BTrecordnum		30000
+BTrecordnum		30
 BTop			0			# 0 for insert, 1 for search

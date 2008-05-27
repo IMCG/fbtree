@@ -1,4 +1,3 @@
-
 #include <sys/types.h>
 
 #include <errno.h>
@@ -42,7 +41,7 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 		return (RET_ERROR);
 	}
 
-	if ((e = __bt_search(t, key, &exact)) == NULL)
+	if ((e = __bt_search_st(t, key, &exact)) == NULL)
 		return (RET_ERROR);
 	if (!exact) {
 		mpool_put(t->bt_mp, e->page, 0);
@@ -50,6 +49,7 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 	}
 
 	status = __bt_ret(t, e, NULL, NULL, data, &t->bt_rdata, 0);
+
 
 	/*
 	 * If the user is doing concurrent access, we copied the

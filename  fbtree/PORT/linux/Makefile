@@ -19,7 +19,7 @@ clean:
 	rm -f ${LIBDB} ${OBJ2} ${OBJ3} ${OBJ4} ${OBJ5} ${MISC}
 
 OORG=	-O
-CL=	${CC} -c -D__DBINTERFACE_PRIVATE ${OORG} -I. -Iinclude -I../../include
+CL=	${CC} -c -g -D__DBINTERFACE_PRIVATE ${OORG} -I. -Iinclude -I../../include
 
 hash.o: ../../hash/hash.c
 	${CL} -I../../hash ../../hash/hash.c

@@ -84,9 +84,7 @@ __bt_free(t, h)
  * @mx XXX why not set h->pgno= *npg directly
  */
 PAGE *
-__bt_new(t, npg)
-	BTREE *t;
-	pgno_t *npg;
+__bt_new_st( BTREE *t, pgno_t *npg)
 {
 	PAGE *h;
 
@@ -94,7 +92,11 @@ __bt_new(t, npg)
 	    (h = mpool_get(t->bt_mp, t->bt_free, 0)) != NULL) {
 		*npg = t->bt_free;
 		t->bt_free = h->nextpg;
-		return (h);
 	}
-	return (mpool_new(t->bt_mp, npg));
+    else{
+	    h= mpool_new(t->bt_mp, npg);
+    }
+    
+    NTT_add(h);
+	return (h);
 }
