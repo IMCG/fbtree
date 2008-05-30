@@ -65,6 +65,8 @@
  * For details on the use of these macros, see the queue(3) manual page.
  */
 
+/* comment to prevent redefintion in list.h */
+#if 0
 /*
  * List definitions.
  */
@@ -107,6 +109,7 @@ struct {								\
 		    (elm)->field.le_prev;				\
 	*(elm)->field.le_prev = (elm)->field.le_next;			\
 }
+#endif
 
 /*
  * Tail queue definitions.

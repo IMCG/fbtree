@@ -1,6 +1,8 @@
+#ifndef __BTREE_ST_H_
+#define __BTREE_ST_H_
 #include "list.h"
-#include "errorhandle.h"
-
+#include "errhandle.h"
+#include <assert.h>
 
 /* ----
  * = Section 1. Node Translation Table =
@@ -11,47 +13,21 @@ typedef struct _sectorlist{
     struct list_head list;
 }SectorList;
 typedef struct _NTTentry{
-    bool        isLeaf;
     u_int32_t   logVersion;
     u_int32_t   maxSeq;
     SectorList  list;
+#define NODE_LOG        0x01
+#define NODE_DISK       0x02
+#define NODE_LEAF       0x04
+#define NODE_INTERNAL   0x08
+    u_char        flags;
 }NTTEntry;
 
-/*use an arry to implement NTT first*/
-#define NTT_MAXSIZE 128 
-static NTTEntry NTT[NTT_MAXSIZE];
 
-NTTEntry* NTT_get(pgno_t pgno){
-    if( pgno<=0 || pgno>NTT_MAXSIZE){
-       err_exit(ERR_PGNO,"pgno > NTT_MAXSIZE OR pgno<=0"); 
-    }
-    return &NTT[pgno];
-
-}
-u_int32_t NTT_getLogVersion(pgno_t pgno){
-    if( pgno<=0 || pgno>NTT_MAXSIZE){
-       err_exit(ERR_PGNO,"pgno > NTT_MAXSIZE OR pgno<=0"); 
-    }
-    return NTT[pgno].logVersion;
-}
-u_int32_t NTT_getMaxSeq(pgno_t pgno){
-    if( pgno<=0 || pgno>NTT_MAXSIZE){
-       err_exit(ERR_PGNO,"pgno > NTT_MAXSIZE OR pgno<=0"); 
-    }
-    return NTT[pgno].maxSeq;
-}
-void NTT_add(PAGE* pg){
-    pgno_t pgno = pg->pgno;
-    /* XXX free NTT's Sector List */
-    NTT[pgno].isLeaf = (pg.flags & P_BLEAF);
-    NTT[pgno].logVersion = -1;
-    INIT_LIST_HEAD(&(NTT[pgno].list.list));
-
-}
-/*
- * Interface to Access NTT
- */
-
+NTTEntry* NTT_get(pgno_t pgno);
+u_int32_t NTT_getLogVersion(pgno_t pgno);
+u_int32_t NTT_getMaxSeq(pgno_t pgno);
+void NTT_add(PAGE* pg);
 
 /* ----
  * = Section 2. Log Entry =
@@ -67,21 +43,23 @@ typedef struct _binternal_log{
 #define ADD_KEY         0x04        /* log entry for add key */
 #define DELETE_KEY      0x08        /* log entry for delete key */
 #define UPDATE_POINTER  0x10        /* log entry for update pointer */
-	u_int32_t	flags;
+	u_char	flags;
 	char	bytes[1];		/* data */
 }BINTERNAL_LOG;
 /* Get the page's BINTERNAL_LOG structure at index indx. */
 #define	GETBINTERNAL_LOG(pg, indx)						\
 	((BINTERNAL_LOG *)((char *)(pg) + (pg)->linp[indx]))
 
-#define NBINTERNAL(len)							\
-	LALIGN(sizeof(u_int32_t) + sizeof(pgno_t) + sizeof(u_char) + (len))
 /* Get the number of bytes in the entry. */
 #define NBINTERNAL_LOG(len)							\
-	LALIGN(sizeof(u_int32_t) + 2*sizeof(pgno_t) + 3*sizeof(u_int32_t) + (len))
+	LALIGN(sizeof(u_int32_t) + 2*sizeof(pgno_t) + 2*sizeof(u_int32_t) + sizeof(u_char) + (len))
+
 /* Get the number of bytes in the entry by the disk mode entry 'bi' */
 #define NBINTERNAL_LOG_FROM_DISK(bi)    \
-    LALIGN( NBINTERNAL(bi->ksize) +  sizeof(pgno_t) + 3*sizeof(u_int32_t) -sizeof(u_char))
+    LALIGN( NBINTERNAL(bi->ksize) +  sizeof(pgno_t) + 2*sizeof(u_int32_t))
+/* Get the number of bytes in the entry by the disk mode entry 'bi' */
+#define NBINTERNAL_DISK_FROM_LOG(bi_log)    \
+    LALIGN( NBINTERNAL_LOG(bi_log->ksize) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
 
 /* Copy a BINTERNAL_LOG entry to the page. */
 #define	WR_BINTERNAL_LOG(p, binternal) {				\
@@ -95,63 +73,39 @@ typedef struct _binternal_log{
 	p += sizeof(u_int32_t);						\
 	*(pgno_t *)p = binternal->logVersion;		\
 	p += sizeof(u_int32_t);						\
-	*(u_char *)p = flags;						\
+	*(u_char *)p = binternal->flags;						\
 	p += sizeof(u_int32_t);						\
     strncpy((char*)p, binternal->bytes, binternal->ksize);  \
 }
-/*
+
+/**
  * disk2log - convert a btree internal's entry of disk mode into log mode
+ *
  * @bi: binternal entry with disk mode
  * @seqnum: sequence number of the new log entry 
  * @logVersion: version of the new log entry 
- * return:
- * binternal entry with log mode
+ * 
+ * @return: binternal entry with log mode
+ *
+ * TODO we only deal with ADD_KEY here
  */
-BINTERNAL_LOG* disk2log_bi(BINTERNAL* bi, u_int32_t seqnum, u_int32_t logVersion){
-    BINTERNAL_LOG* bi_log = (BINTERNAL_LOG*)malloc(NBINTERNAL_LOG_FROM_DISK(bi) ); 
-    bi_log->ksize = bi->ksize;
-    bi_log->nodeID = bi->pgno;
-    bi_log->seqnum = seqnum;
-    bi_log->logVersion = logVersion;
-    bi_log->flags = ADD_KEY;
-    memcpy(bi_log->bytes,bi->bytes,bi->ksize);
-    return bi_log;    
-}
-/*
- * genLogFromNode - generate log entries from a disk mode node AND put them into log buffer,
- *                  i.e. convert the real node into a set of log entries
- * @pg: the node's page header
+BINTERNAL_LOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
+/**
+ * disk2log - convert a btree internal's entry of disk mode into log mode
+ *
+ * @bi_log: binternal entry with log mode 
+ * 
+ * @return: new binternal entry with disk mode
+ *
+ * TODO we only deal with ADD_KEY here
  */
-void genLogFromNode( PAGE* pg){
-    unsigned int i;
-    BINTERNAL* bi;
-    BINTERNAL_LOG* bi_log;
-    NTTEntry* e;
-    for (i=0; i<NEXTINDEX(pg); i++){
-        bi = GETBINTERNAL(pg,i);
-        assert(bi!=NULL);
-        e = NTT_get(pg->pgno);
-        disk2log_bi(bi,e->maxSeq+1,e->logVersion+1);
-        e->maxSeq++;
-        e->logVersion++;
-    }
-}
-
+BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log);
 /* ----
  * = Section 3. Log Buffer =
  * ----
  */
 static pgno_t pgno_logbuf;
-void logpool_put(BTREE* t ,BINTERNAL_LOG* bi){
-    PAGE* logbuf;
-    logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
-    
-    WR_BINTERNAL_LOG(logbuf, bi);
-
-    assert(bi!=NULL);
-    free(bi);
-
-}
+void logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log);
 /* NOT used at current time */
 #if 0 
 typedef struct _bleaf_log{
@@ -168,11 +122,17 @@ typedef struct _bleaf_log{
  * ----
  */
 
-
 /* ----
  * = Section 5. Node operation =
  * ----
  */
+
+PAGE* read_node(MPOOL*mp , pgno_t x);
+void addkey2node_log(PAGE* h ,BINTERNAL_LOG* bi_log);
+void addkey2node( PAGE* h, BINTERNAL* bi, indx_t skip);
+indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
+void genLogFromNode( PAGE* pg);
+/*
 int CreateNode(pgno_t nodeID){
 
 }
@@ -184,4 +144,5 @@ int ReadNode(pgno_t nodeID){
 int UpdateNode(pgno_t nodeID){
 
 }
-
+*/
+#endif
