@@ -34,12 +34,8 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
     LogList* entry;
     BINTERNAL_LOG* log;
     const char* err_loc = "function (__rebuild_node) in 'node.c'";
-    // sort the log entry by seqnum
+    // TODO: sort the log entry by seqnum
 
-    if(h==NULL){
-        fprintf(stderr,"can't create new node.\n");
-        return (NULL);
-    }
     // apply the log entries to construc a node
     /* XXX 
      * you must sort the list to make it in order
@@ -75,6 +71,7 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
  * Otherwise, it's in log mode, collect all logs then rebuild the node. 
  */
 PAGE* read_node(MPOOL*mp , pgno_t x){
+    const char* err_loc = "function (read_node) in 'node.c'";
     PAGE *h;
     pgno_t pg;
     BINTERNAL_LOG * bi_log;
@@ -121,7 +118,7 @@ PAGE* read_node(MPOOL*mp , pgno_t x){
         return __rebuild_node(h,&logCollector);
     }
     else{
-        err_quit("unknown mode of node");
+        err_quit("unknown mode of node: %s",err_loc);
     }
 
 }

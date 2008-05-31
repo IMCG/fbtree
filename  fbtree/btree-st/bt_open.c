@@ -389,6 +389,8 @@ nroot(t)
 	memset(meta, 0, t->bt_psize);
 	mpool_put(t->bt_mp, meta, MPOOL_DIRTY);
 	mpool_put(t->bt_mp, root, MPOOL_DIRTY);
+    
+    NTT_add(root);
 	return (RET_SUCCESS);
 }
 

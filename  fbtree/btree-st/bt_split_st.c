@@ -81,6 +81,7 @@ u_long	bt_rootsplit, bt_split, bt_sortsplit, bt_pfxsaved;
 int
 __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, size_t ilen, u_int32_t argskip)
 {
+    const char* err_loc = "function (__bt_split_st) in 'bt_split_st.c'";
 	BINTERNAL *bi;
 	BINTERNAL_LOG *bi_log;
 	BLEAF *bl, *tbl;
@@ -92,7 +93,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	u_int32_t n, nbytes, nksize;
 	int parentsplit;
 	char *dest;
-    int mode; /* mode of current node */
+    u_char mode; /* mode of current node */
     NTTEntry* entry;
 
 	skip = argskip; /* @mx why not use argskip directly ? */
@@ -158,7 +159,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 */
 	while ((parent = BT_POP(t)) != NULL) {
         /* TODO set the mode of the current page */
-        mode = 0;
+        mode = NODE_DISK ;        
 		
         lchild = l;
 		rchild = r;
@@ -329,7 +330,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
                 logpool_put(t,bi_log);
             }
             else{
-                err_quit("unknown mode!");
+                err_quit("unknown mode: %s",err_loc);
             }
 			break;
 		}
