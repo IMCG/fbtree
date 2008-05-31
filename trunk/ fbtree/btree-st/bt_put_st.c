@@ -26,6 +26,7 @@ static EPG *bt_fast __P((BTREE *, const DBT *, const DBT *, int *));
 int
 __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 {
+    const char* err_loc = "function (__bt_put_st) in 'bt_put_st.c'";
 	BTREE *t;
 	DBT tkey, tdata;
 	EPG *e;
@@ -47,6 +48,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	/* Check for change to a read-only tree. */
 	if (F_ISSET(t, B_RDONLY)) {
 		errno = EPERM;
+        err_ret("it's a read only tree: %s",err_loc);
 		return (RET_ERROR);
 	}
     //XXX deal with big data/key and R_CURSOR
@@ -130,8 +132,10 @@ storekey:		if (__ovfl_put(t, key, &pg) == RET_ERROR)
      * ??? bt_fast {FORWARD,BACK}
 	 */
 	if (t->bt_order == NOT || (e = bt_fast(t, key, data, &exact)) == NULL)
-		if ((e = __bt_search_st(t, key, &exact)) == NULL)
+		if ((e = __bt_search_st(t, key, &exact)) == NULL){
+            err_ret("error of __bt_search-st: %s",err_loc);
 			return (RET_ERROR);
+        }
 	h = e->page;
 	index = e->index;
 
@@ -177,8 +181,10 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 	nbytes = NBLEAFDBT(key->size, data->size);
 	if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
 		if ((status = __bt_split_st(t, h, key,
-		    data, dflags, nbytes, index)) != RET_SUCCESS)
+		    data, dflags, nbytes, index)) != RET_SUCCESS){
+            err_ret("error of __bt_split_st: %s",err_loc);
 			return (status);
+        }
 		goto success;
 	}
     /* == Case 2. directly insert if enough room == 

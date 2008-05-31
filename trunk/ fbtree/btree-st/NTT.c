@@ -25,13 +25,25 @@ u_int32_t NTT_getMaxSeq(pgno_t pgno){
     return NTT[pgno].maxSeq;
 }
 #endif
+//TODO:
 void NTT_add(PAGE* pg){
+    const char * err_loc = "function (NTT_add) in 'node.c'";
     pgno_t pgno = pg->pgno;
+    NTTEntry* entry = NTT_get(pgno);
     /* XXX free NTT's Sector List */
-    NTT[pgno].isLeaf = (pg->flags & P_BLEAF);
-    NTT[pgno].logVersion = -1;
+    if(pg->flags & P_BLEAF){
+        entry->flags = NODE_DISK | NODE_LEAF;
+    }
+    else if(pg->flags & P_BINTERNAL){
+        /* FIXME it should be ? */
+        entry->flags = NODE_INTERNAL | NODE_DISK;
+    }
+    else{
+        err_quit("unknown flags: %s",err_loc);
+    }
+    entry->logVersion = -1;
+    entry->maxSeq= -1;
     INIT_LIST_HEAD(&(NTT[pgno].list.list));
 
 }
-
 
