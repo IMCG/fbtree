@@ -59,16 +59,22 @@ void testBT(){
 		err_quit("can't open file %s\n", config.BTdatfile);
 	}
 	
-    for( i = 0 ; i<100 ; i+=2){
+    for( i = 0 ; i<400 ; i++){
+        fprintf(stderr,"\ni=%d\n",i);
         k = (u_int32_t)i;
         d = (u_int32_t)i*i;
+
         rc = dbp->put(dbp, &key, &data, R_NOOVERWRITE);
-        printf("(%d,%d)\n", *(int*)key.data,*(int*)data.data);
+        
+        //err_debug("insert (%d,%d)\n", *(int*)key.data,*(int*)data.data);
+        
         if(rc!=RET_SUCCESS){
             err_quit("db put error");
         }
         
-        rk=32;
+        //__bt_dump(dbp);
+        
+        rk=i/2;
         rkey.size=4;
         rkey.data=(void*)&rk;
         rdata.size=0;
@@ -79,12 +85,13 @@ void testBT(){
             err_quit("error while try to get ");
         }
         else if(rc==0){
-            printf("find the pair (%d,%d)\n", *(int*)rkey.data,*(int*)rdata.data);
+            //err_debug("find the pair (%d,%d)\n", *(int*)rkey.data,*(int*)rdata.data);
         }
         else{
-            printf("not in the database\n");
+            //err_debug("not in the database\n");
         }
     }
+    //__bt_dump(dbp);
 	(void)dbp->close(dbp);
 
  } 

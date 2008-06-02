@@ -34,6 +34,11 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
     LogList* entry;
     BINTERNAL_LOG* log;
     const char* err_loc = "function (__rebuild_node) in 'node.c'";
+
+#ifdef NODE_DEBUG
+    err_debug("rebuild node %d", h->pgno);
+#endif
+
     // TODO: sort the log entry by seqnum
 
     // apply the log entries to construc a node

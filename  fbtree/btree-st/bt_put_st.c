@@ -51,10 +51,10 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
         err_ret("it's a read only tree: %s",err_loc);
 		return (RET_ERROR);
 	}
-    //XXX deal with big data/key and R_CURSOR
+
 	assert (!(key->size + data->size > t->bt_ovflsize));
 	assert (!(flags == R_CURSOR));
-
+    /* XXX deal with big data/key and R_CURSOR */
 #if 0
 //{{{
 	switch (flags) {
@@ -138,7 +138,6 @@ storekey:		if (__ovfl_put(t, key, &pg) == RET_ERROR)
         }
 	h = e->page;
 	index = e->index;
-
 	/* ----
      * = Step 2. Insert key/data into the tree =
      * ----
@@ -182,9 +181,9 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 	if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
 		if ((status = __bt_split_st(t, h, key,
 		    data, dflags, nbytes, index)) != RET_SUCCESS){
-            err_ret("error of __bt_split_st: %s",err_loc);
 			return (status);
         }
+
 		goto success;
 	}
     /* == Case 2. directly insert if enough room == 
@@ -300,6 +299,8 @@ bt_fast(t, key, data, exactp)
 #ifdef STATISTICS
 	++bt_cache_hit;
 #endif
+    //TODO-DEBUG
+    err_debug("HIT cache!\n");
 	return (&t->bt_cur);
 
 miss:
