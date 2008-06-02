@@ -81,7 +81,6 @@ __bt_free(t, h)
  * Returns:
  *	Pointer to a page, NULL on error.
  * 
- * @mx XXX why not set h->pgno= *npg directly
  */
 PAGE *
 __bt_new( BTREE *t, pgno_t *npg)
@@ -96,7 +95,11 @@ __bt_new( BTREE *t, pgno_t *npg)
     else{
 	    h= mpool_new(t->bt_mp, npg);
     }
-    
+    /* @mx 
+     * In the original version, the function don't set 'h->pgno= *npg' directly. It set it outside.
+     * Here we set it. It won't affect other code either since they'll reset it
+     */
+    h->pgno = *npg; 
     NTT_add(h);
 	return (h);
 }

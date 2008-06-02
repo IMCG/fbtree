@@ -105,12 +105,14 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 * skip set to the offset which should be used.  Additionally, l and r
 	 * are pinned.
 	 */
+    fprintf(stderr,"pgno = %d, in  __bt_split\n");
 	h = sp->pgno == P_ROOT ?
 	    bt_root(t, sp, &l, &r, &skip, ilen) :
 	    bt_page(t, sp, &l, &r, &skip, ilen);
 	if (h == NULL)
 		return (RET_ERROR);
 
+    fprintf(stderr,"after bt_page\n");
 	/* ----
      * = Step 2. insert new key/data pair into leaf =
      * ----
