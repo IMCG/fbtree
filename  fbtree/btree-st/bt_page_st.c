@@ -99,7 +99,11 @@ __bt_new( BTREE *t, pgno_t *npg)
      * In the original version, the function don't set 'h->pgno= *npg' directly. It set it outside.
      * Here we set it. It won't affect other code either since they'll reset it
      */
-    h->pgno = *npg; 
+    assert(h!=NULL);
+    h->pgno = *npg;
+    //TODO:ing
+    err_debug("npg = %ud",*npg);
+    err_debug("here");
     NTT_add(h);
 	return (h);
 }
