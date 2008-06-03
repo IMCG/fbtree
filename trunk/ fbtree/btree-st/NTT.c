@@ -9,8 +9,9 @@ static NTTEntry NTT[NTT_MAXSIZE];
  */
 NTTEntry* NTT_get(pgno_t pgno){
     //const char* err_loc = "function (NTT_get) in NTT.c";
+    //TODO-DEBUG
+    err_debug("pgno = %ud\n", pgno);
     assert( pgno > 0 && pgno<= NTT_MAXSIZE);
-    //err_debug("pgno = %d\n", pgno);
     
     return &NTT[pgno];
 
@@ -42,7 +43,7 @@ void NTT_add(PAGE* pg){
     NTTEntry* entry;
 
 #ifdef NTT_DEBUG
-    err_debug("add PAGE %ud to the NTT",pgno); /* Just show a message, not *error* */
+    err_debug("add PAGE %ud to the NTT ",pgno); /* Just show a message, not *error* */
 #endif
     entry = NTT_get(pgno);
     /* XXX free NTT's Sector List */

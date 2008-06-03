@@ -55,17 +55,14 @@ static PAGE* logbuf;
 /**
  * logpool_init - initialize the log buffer pool
  * @mp: buffer pool
+ *
+ * it should be empty
  */
 void logpool_init(BTREE* t){
     const char* err_loc = "function (logpool_init) in 'log.c'";
-    PAGE* h = __bt_new(t,&pgno_logbuf);
+    logbuf = NULL;
+    pgno_logbuf = P_INVALID;
 
-    if(h==NULL)
-        err_sys("can't initialize the log pool: %s", err_loc);
-    h->pgno = pgno_logbuf;
-    h->prevpg = P_INVALID; 
-    h->nextpg = P_INVALID; 
-    //TODO: maybe we should pin it from now
 }
 /**
  * logpool_put - put the log entry into the log buffer
@@ -79,7 +76,11 @@ pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
     const char* err_loc = "function (logpool_put) in 'log.c'";
     u_int32_t nbytes;
 
-    nbytes = NBINTERNAL_DISK_FROM_LOG(bi_log); 
+    nbytes = NBINTERNAL_DISK_FROM_LOG(bi_log);
+    // first call
+    if (logbuf == NULL)
+        logbuf = __bt_new(t,&pgno_logbuf);
+
 	if (logbuf->upper - logbuf->lower < nbytes + sizeof(indx_t)) {
         mpool_sync_page(t->bt_mp,pgno_logbuf);
         logbuf = __bt_new(t,&pgno_logbuf);
