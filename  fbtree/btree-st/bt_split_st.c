@@ -105,14 +105,12 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 * skip set to the offset which should be used.  Additionally, l and r
 	 * are pinned.
 	 */
-    fprintf(stderr,"pgno = %d, in  __bt_split\n");
 	h = sp->pgno == P_ROOT ?
 	    bt_root(t, sp, &l, &r, &skip, ilen) :
 	    bt_page(t, sp, &l, &r, &skip, ilen);
 	if (h == NULL)
 		return (RET_ERROR);
 
-    fprintf(stderr,"after bt_page\n");
 	/* ----
      * = Step 2. insert new key/data pair into leaf =
      * ----
@@ -160,11 +158,11 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
      * }}}
 	 */
 	while ((parent = BT_POP(t)) != NULL) {
-        /* TODO set the mode of the current page */
-        mode = NODE_DISK ;        
+        /* TODO: set the mode of the current page */
+        mode = NODE_LOG ;        
 		
         lchild = l;
-		rchild = r;
+		rchild = r; /* @mx use rchild to save value of r, because r is used to point to the new splited page,later. */
         
 	    /* ----
          * == Step 3.1. get the parent page and calculate the space needed on the parent page. ==
@@ -204,6 +202,8 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		case P_BLEAF:
 			bl = GETBLEAF(rchild, 0);
 			nbytes = NBINTERNAL(bl->ksize);
+// NO PREFIX COMPRESSION here {{{
+#if 0
 			if (t->bt_pfx && !(bl->flags & P_BIGKEY) &&
 			    (h->prevpg != P_INVALID || skip > 1)) {
 				tbl = GETBLEAF(lchild, NEXTINDEX(lchild) - 1);
@@ -221,8 +221,11 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 				} else
 					nksize = 0;
 			} else
-				nksize = 0;
+#endif
+//}}}
+			nksize = 0;
 			break;
+
 		case P_RINTERNAL:
 		case P_RLEAF:
 			nbytes = NRINTERNAL;
@@ -345,7 +348,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 
         if(mode & NODE_LOG){
             // TODO ing...
-            genLogFromNode(h);
+            genLogFromNode(t,h);
         }
 
 		mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
@@ -492,10 +495,10 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 	memmove(h, l, t->bt_psize);
 	if (tp == l){
 		tp = h;
-        genLogFromNode(r);
+        genLogFromNode(t,r);
     }
     else{  /* tp==r  */
-        genLogFromNode(l);
+        genLogFromNode(t,l);
     }
 	free(l);
 
@@ -622,12 +625,15 @@ bt_broot(t, h, l, r)
 	BLEAF *bl;
 	u_int32_t nbytes;
 	char *dest;
-
+    NTTEntry* entry;
+    entry = NTT_get(h->pgno);
 	/*
 	 * If the root page was a leaf page, change it into an internal page.
 	 * We copy the key we split on (but not the key's data, in the case of
 	 * a leaf page) to the new root page.
-	 *
+     *
+	 * @mx It means we have to modify the mode of NTT
+     *
 	 * The btree comparison code guarantees that the left-most key on any
 	 * level of the tree is never used, so it doesn't need to be filled in.
 	 */
@@ -644,6 +650,9 @@ bt_broot(t, h, l, r)
 		dest = (char *)h + h->upper;
 		WR_BINTERNAL(dest, bl->ksize, r->pgno, 0);
 		memmove(dest, bl->bytes, bl->ksize);
+        /* TODO XXX we suppose all the internal node is log mode */
+        /* TODO: NTT sector list should be changed */ 
+        entry->flags = NODE_INTERNAL | NODE_LOG;
 
 		/*
 		 * If the key is on an overflow page, mark the overflow chain

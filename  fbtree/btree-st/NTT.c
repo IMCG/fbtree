@@ -3,22 +3,15 @@
 #define NTT_MAXSIZE 256 
 //static NTTEntry NTT[NTT_MAXSIZE];
 static NTTEntry NTT[NTT_MAXSIZE];
-
+/**
+ * NTT_get - Get the NTTentry by pgno
+ * @pgno - page no of the entry (i.e. node id)
+ */
 NTTEntry* NTT_get(pgno_t pgno){
-    const char* err_loc = "function (NTT_get) in NTT.c";
-    if( pgno==0){
-       //TODO: pgno<=0?
-        err_quit("pgno=0: %s", err_loc); 
-    }
-    else if(pgno > NTT_MAXSIZE){
-       err_quit("pgno > NTT_MAXSIZE: %s", err_loc); 
-    }
-    else if(pgno<0){
-        err_quit("pgno< 0: %s", err_loc);
-    }
-    else{
-        //err_debug("pgno = %d\n", pgno);
-    }
+    //const char* err_loc = "function (NTT_get) in NTT.c";
+    assert( pgno > 0 && pgno<= NTT_MAXSIZE);
+    //err_debug("pgno = %d\n", pgno);
+    
     return &NTT[pgno];
 
 }
@@ -37,9 +30,14 @@ u_int32_t NTT_getMaxSeq(pgno_t pgno){
     return NTT[pgno].maxSeq;
 }
 #endif
-//TODO:
+/**
+ * NTT_add - Add a new node to the NTT
+ * @pg - page header of the new node
+ *
+ * For log mode node, we construct pg as an identifier of node
+ */
 void NTT_add(PAGE* pg){
-    const char * err_loc = "function (NTT_add) in 'node.c'";
+    const char * err_loc = "function (NTT_add) in 'NTT.c'";
     pgno_t pgno = pg->pgno;
     NTTEntry* entry;
 
@@ -62,5 +60,34 @@ void NTT_add(PAGE* pg){
     entry->maxSeq= -1;
     INIT_LIST_HEAD(&(NTT[pgno].list.list));
 
+}
+
+/**
+ * NTT_add_pgno - Add pgno to the sector list of NTT[nodeID]
+ * @nodeID: page no of the node
+ * @pgno: pgno to insert into
+ *
+ * if the pgno exist in the node, we abort or do nothing 
+ *
+ */
+void NTT_add_pgno(pgno_t nodeID, pgno_t pgno){
+    const char * err_loc = "function (NTT_add_pgno) in 'NTT.c'";
+    NTTEntry* entry = NTT_get(nodeID);
+    SectorList* slist = & entry->list;
+    SectorList* nslist;
+    
+    /* Iterate Sector List to check whether there's duplicate pgno. 
+     * It will be too slow if we check it every time. 
+     */
+#ifdef NTT_DEBUG
+    list_for_each_entry(nslist,&slist->list,list){
+        assert(nslist->pgno!=pgno);
+    }
+#endif
+
+    nslist= malloc(sizeof(SectorList));
+    if(nslist==NULL)    err_sys("error while malloc sector list: %s",err_loc);
+    nslist->pgno = pgno;
+    list_add(&(nslist->list),&(slist->list));
 }
 

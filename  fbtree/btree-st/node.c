@@ -39,13 +39,13 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
     err_debug("rebuild node %d", h->pgno);
 #endif
 
-    // TODO: sort the log entry by seqnum
 
-    // apply the log entries to construc a node
-    /* XXX 
+    /* TODO sort the log entry by seqnum
+     * XXX 
      * you must sort the list to make it in order
      * but if it's append only, the order is not important
      */
+    // apply the log entries to construc a node
     list_for_each_entry(entry,&(list->list),list){
         log = entry->log;
         assert(!( (log->flags & P_BIGKEY) | (log->flags & P_BIGDATA)));
@@ -90,10 +90,15 @@ PAGE* read_node(MPOOL*mp , pgno_t x){
     
     if( entry->flags & NODE_DISK){
         h = mpool_get(mp,x,0);
+#ifdef NODE_DEBUG
+        err_debug("%s node %ud in DISK mode : %s", (h->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,x,err_loc);
+#endif
         return h;
     }
     else if(entry->flags & NODE_LOG){
-
+#ifdef NODE_DEBUG
+        err_debug("%s node %ud in LOG mode : %s", (entry->flags & NODE_INTERNAL) ? "INTERNAL": "LEAF" ,x,err_loc);
+#endif
         INIT_LIST_HEAD(&logCollector.list);
         version = entry->logVersion;
         head = &(entry->list);
@@ -104,7 +109,7 @@ PAGE* read_node(MPOOL*mp , pgno_t x){
             // get the PAGE(pgno)
             h = mpool_get(mp,slist->pgno,0);
             if( h==NULL ){
-                err_quit("can't get page");
+                err_quit("can't get page: %s", err_loc);
             }
 
             // iterate the page to collect entry in this page
@@ -254,23 +259,34 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
 }
 /*
  *
- * genLogFromNode - generate log entries from a disk mode node AND put them into log buffer,
+ * genLogFromNode - generate log entries from a disk mode node AND put them into log buffer.
  * @pg: the node's page lister
  * 
  * we convert the real node into a set of log entries
+ * FIXME the interface has been changed
  */
-void genLogFromNode( PAGE* pg){
+void genLogFromNode(BTREE* t, PAGE* pg){
     unsigned int i;
     BINTERNAL* bi;
     BINTERNAL_LOG* bi_log;
     NTTEntry* e;
+    pgno_t pgno,npgno;
+    pgno = P_INVALID;
     for (i=0; i<NEXTINDEX(pg); i++){
         bi = GETBINTERNAL(pg,i);
         assert(bi!=NULL);
         e = NTT_get(pg->pgno);
-        disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
+        bi_log = disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
+
+        /* TODO XXX ensure atomic operation we should compute the size first */
+        npgno = logpool_put(t,bi_log); 
+        
         e->maxSeq++;
         e->logVersion++;
+        //XXX e is refecthed in NTT_add_pgno
+        if(npgno!=pgno){
+            NTT_add_pgno(pg->pgno,npgno);
+            pgno = npgno;
+        }
     }
 }
-
