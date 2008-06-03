@@ -80,8 +80,13 @@ pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
     // first call
     if (logbuf == NULL)
         logbuf = __bt_new(t,&pgno_logbuf);
-
+#ifdef LOG_DEBUG
+    err_debug("put a log into the log buffer pool");
+#endif
 	if (logbuf->upper - logbuf->lower < nbytes + sizeof(indx_t)) {
+#ifdef LOG_DEBUG
+        err_debug("log buffer is full. flush~~");
+#endif
         mpool_sync_page(t->bt_mp,pgno_logbuf);
         logbuf = __bt_new(t,&pgno_logbuf);
         // ??? after sync, the page still be pinned?

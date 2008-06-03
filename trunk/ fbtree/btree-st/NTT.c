@@ -3,14 +3,28 @@
 #define NTT_MAXSIZE 256 
 //static NTTEntry NTT[NTT_MAXSIZE];
 static NTTEntry NTT[NTT_MAXSIZE];
+
+/**
+ * NTT_init - Initialize the Node Translation Table
+ *
+ * @return: RET_SUCCESS if initialize successfully.
+ *
+ * NOTE: NTT[0] is not used
+ */
+int NTT_init(){
+    int i;
+    for(i=1; i<NTT_MAXSIZE; i++){
+        NTT[i].flags = NODE_INVALID;
+        NTT[i].logVersion = -1;
+    }
+}
 /**
  * NTT_get - Get the NTTentry by pgno
  * @pgno - page no of the entry (i.e. node id)
  */
 NTTEntry* NTT_get(pgno_t pgno){
     //const char* err_loc = "function (NTT_get) in NTT.c";
-    //TODO-DEBUG
-    err_debug("pgno = %ud\n", pgno);
+    //err_debug("pgno = %ud\n", pgno);
     assert( pgno > 0 && pgno<= NTT_MAXSIZE);
     
     return &NTT[pgno];
@@ -42,17 +56,20 @@ void NTT_add(PAGE* pg){
     pgno_t pgno = pg->pgno;
     NTTEntry* entry;
 
-#ifdef NTT_DEBUG
-    err_debug("add PAGE %ud to the NTT ",pgno); /* Just show a message, not *error* */
-#endif
     entry = NTT_get(pgno);
     /* XXX free NTT's Sector List */
     if(pg->flags & P_BLEAF){
         entry->flags = NODE_DISK | NODE_LEAF;
+#ifdef NTT_DEBUG
+        err_debug("Add the (DISK|LEAF) PAGE %ud to the NTT", pgno);
+#endif
     }
     else if(pg->flags & P_BINTERNAL){
         /* FIXME it should be ? */
         entry->flags = NODE_INTERNAL | NODE_LOG;
+#ifdef NTT_DEBUG
+        err_debug("Add the (LOG|INTERNAL) PAGE %ud to the NTT", pgno);
+#endif
     }
     else{
         err_quit("unknown flags: %s",err_loc);
@@ -72,7 +89,7 @@ void NTT_add(PAGE* pg){
  *
  */
 void NTT_add_pgno(pgno_t nodeID, pgno_t pgno){
-    const char * err_loc = "function (NTT_add_pgno) in 'NTT.c'";
+    const char * err_loc = "(NTT_add_pgno) in 'NTT.c'";
     NTTEntry* entry = NTT_get(nodeID);
     SectorList* slist = & entry->list;
     SectorList* nslist;
@@ -84,6 +101,7 @@ void NTT_add_pgno(pgno_t nodeID, pgno_t pgno){
     list_for_each_entry(nslist,&slist->list,list){
         assert(nslist->pgno!=pgno);
     }
+    err_debug("Add pgno %ud to the sector list of NTT[%ud]",pgno,nodeID);
 #endif
 
     nslist= malloc(sizeof(SectorList));
@@ -92,3 +110,29 @@ void NTT_add_pgno(pgno_t nodeID, pgno_t pgno){
     list_add(&(nslist->list),&(slist->list));
 }
 
+void NTT_dump( ){
+    NTTEntry* entry;
+    SectorList* slist;
+    SectorList* slist_entry;
+    int i;
+
+    for( i=1; i<NTT_MAXSIZE ; i++){
+        entry = NTT_get(i);
+        if(entry->flags & NODE_INVALID) continue;
+        fprintf(stderr,"NTT[%ud]: ", i);
+        fprintf(stderr," logVersion = %ud, ", entry->logVersion);
+        fprintf(stderr," maxSeq = %ud, ", entry->maxSeq);
+        fprintf(stderr," flags = %s |", (entry->flags & NODE_LOG) ? "NODE_LOG": "NODE_DISK");
+        fprintf(stderr," %s, ", (entry->flags & NODE_LEAF) ? "NODE_LEAF": "NODE_INTERNAL");
+
+        slist = & entry->list;
+        fprintf(stderr,"slist = (");
+        list_for_each_entry(slist_entry,&slist->list,list){
+            assert(slist_entry != NULL);
+            fprintf(stderr," %ud,",slist_entry->pgno);
+        }
+        fprintf(stderr,")\n");
+    }    
+    
+
+}

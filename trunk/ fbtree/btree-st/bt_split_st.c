@@ -105,6 +105,10 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 * skip set to the offset which should be used.  Additionally, l and r
 	 * are pinned.
 	 */
+#ifdef BT_SPLIT_DEBUG
+    err_debug("First, split PAGE %ud",sp->pgno);
+#endif
+    /* h is page to insert data */
 	h = sp->pgno == P_ROOT ?
 	    bt_root(t, sp, &l, &r, &skip, ilen) :
 	    bt_page(t, sp, &l, &r, &skip, ilen);
@@ -116,6 +120,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
      * ----
 	 * Insert the new key/data pair into the leaf page.  (Key inserts
 	 * always cause a leaf page to split first.)
+     * TODO XXX we needn't add log here since leaf is always disk mode, do it later! 
 	 */
 	h->linp[skip] = h->upper -= ilen;
 	dest = (char *)h + h->upper;
@@ -130,6 +135,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	    bt_rroot(t, sp, l, r) : bt_broot(t, sp, l, r)) == RET_ERROR)
 		goto err2;
 
+    genLogFromNode(t,sp);
 	/* ----
      * = Step 3. update parent node's pointer or split parent node if necessary =
      * ----
@@ -160,7 +166,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	while ((parent = BT_POP(t)) != NULL) {
         /* TODO: set the mode of the current page */
         mode = NODE_LOG ;        
-		
+	
         lchild = l;
 		rchild = r; /* @mx use rchild to save value of r, because r is used to point to the new splited page,later. */
         
@@ -322,10 +328,13 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		default:
 			abort();
 		}
-
 		/* Unpin the held pages. */
         /* @mx parent is not splited, you only need to add a signle log entry */
 		if (!parentsplit) {
+
+            assert(     (  mode & ( NODE_DISK | NODE_LOG) ) 
+                    && !( (mode & NODE_DISK) && (mode & NODE_LOG))  );
+
             if(mode & NODE_DISK){
 			    mpool_put(t->bt_mp, h, MPOOL_DIRTY);
             }
@@ -333,9 +342,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
                 entry =  NTT_get(h->pgno);
                 bi_log = disk2log_bi((BINTERNAL*)dest, h->pgno, entry->maxSeq++, entry->logVersion);
                 logpool_put(t,bi_log);
-            }
-            else{
-                err_quit("unknown mode: %s",err_loc);
             }
 			break;
 		}
@@ -417,7 +423,7 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 	r->nextpg = h->nextpg;
 	r->prevpg = h->pgno;
 	r->flags = h->flags & P_TYPE;
-    
+    NTT_add(r);
 	/* ----
      * = Step 2. split node h =
      * ----
@@ -488,7 +494,7 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
      *
      * @mx tp = 'l' OR 'r'
 	 */
-    //XXX
+    //XXX assume all internal node is leaf node
 	tp = bt_psplit(t, h, l, r, skip, ilen);
 
 	/* Move the new left page onto the old left page. */
@@ -550,6 +556,8 @@ bt_root(t, h, lp, rp, skip, ilen)
 	l->upper = r->upper = t->bt_psize;
 	l->flags = r->flags = h->flags & P_TYPE;
 
+    NTT_add(l);
+    NTT_add(r);
 	/* Split the root page. */
 	tp = bt_psplit(t, h, l, r, skip, ilen);
 
@@ -651,7 +659,10 @@ bt_broot(t, h, l, r)
 		WR_BINTERNAL(dest, bl->ksize, r->pgno, 0);
 		memmove(dest, bl->bytes, bl->ksize);
         /* TODO XXX we suppose all the internal node is log mode */
-        /* TODO: NTT sector list should be changed */ 
+        /* TODO: NTT sector list should be changed */
+#ifdef NTT_DEBUG
+        err_debug("Change root into (INTERNAL|LOG)");
+#endif
         entry->flags = NODE_INTERNAL | NODE_LOG;
 
 		/*

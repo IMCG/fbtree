@@ -20,7 +20,8 @@ typedef struct _NTTentry{
 #define NODE_DISK       0x02
 #define NODE_LEAF       0x04
 #define NODE_INTERNAL   0x08
-    u_char        flags;
+#define NODE_INVALID    0x10    /* flags are also used to check whether is it valid node */
+    u_char        flags;        /* Note: clear NODE_INVALID when set others!!! */
 }NTTEntry;
 
 
@@ -29,6 +30,7 @@ NTTEntry* NTT_get(pgno_t pgno);
 //u_int32_t NTT_getMaxSeq(pgno_t pgno);
 void NTT_add(PAGE* pg);
 void NTT_add_pgno(pgno_t nodeID, pgno_t pgno);
+void NTT_dump();
 /* ----
  * = Section 2. Log Entry =
  * ----
