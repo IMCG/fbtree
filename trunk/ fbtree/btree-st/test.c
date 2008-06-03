@@ -60,13 +60,13 @@ void testBT(){
 	}
 	
     for( i = 0 ; i<400 ; i++){
-        fprintf(stderr,"\ni=%d\n",i);
+        fprintf(stderr,"i=%d\n",i);
         k = (u_int32_t)i;
         d = (u_int32_t)i*i;
 
         rc = dbp->put(dbp, &key, &data, R_NOOVERWRITE);
         
-        //err_debug("insert (%d,%d)\n", *(int*)key.data,*(int*)data.data);
+        err_debug("insert (%d,%d)\n", *(int*)key.data,*(int*)data.data);
         
         if(rc!=RET_SUCCESS){
             err_quit("db put error");
@@ -74,7 +74,7 @@ void testBT(){
         
         //__bt_dump(dbp);
         
-        rk=i/2;
+        rk=i/2+1;
         rkey.size=4;
         rkey.data=(void*)&rk;
         rdata.size=0;
@@ -85,10 +85,10 @@ void testBT(){
             err_quit("error while try to get ");
         }
         else if(rc==0){
-            //err_debug("find the pair (%d,%d)\n", *(int*)rkey.data,*(int*)rdata.data);
+            err_debug("find the pair (%d,%d)\n", *(int*)rkey.data,*(int*)rdata.data);
         }
         else{
-            //err_debug("not in the database\n");
+            err_debug("not in the database\n");
         }
     }
     //__bt_dump(dbp);

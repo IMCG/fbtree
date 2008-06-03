@@ -25,10 +25,10 @@ typedef struct _NTTentry{
 
 
 NTTEntry* NTT_get(pgno_t pgno);
-u_int32_t NTT_getLogVersion(pgno_t pgno);
-u_int32_t NTT_getMaxSeq(pgno_t pgno);
+//u_int32_t NTT_getLogVersion(pgno_t pgno);
+//u_int32_t NTT_getMaxSeq(pgno_t pgno);
 void NTT_add(PAGE* pg);
-
+void NTT_add_pgno(pgno_t nodeID, pgno_t pgno);
 /* ----
  * = Section 2. Log Entry =
  * ----
@@ -57,7 +57,7 @@ typedef struct _binternal_log{
 /* Get the number of bytes in the entry by the disk mode entry 'bi' */
 #define NBINTERNAL_LOG_FROM_DISK(bi)    \
     LALIGN( NBINTERNAL(bi->ksize) +  sizeof(pgno_t) + 2*sizeof(u_int32_t))
-/* Get the number of bytes in the entry by the disk mode entry 'bi' */
+/* Get the number of bytes in the entry by the log mode entry 'bi' */
 #define NBINTERNAL_DISK_FROM_LOG(bi_log)    \
     LALIGN( NBINTERNAL_LOG(bi_log->ksize) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
 
@@ -104,8 +104,10 @@ BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log);
  * = Section 3. Log Buffer =
  * ----
  */
-static pgno_t pgno_logbuf;
-void logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log);
+
+void logpool_init(BTREE* t);
+pgno_t logpool_put(BTREE* t,BINTERNAL_LOG* bi_log);
+
 /* NOT used at current time */
 #if 0 
 typedef struct _bleaf_log{
@@ -118,12 +120,7 @@ typedef struct _bleaf_log{
 #endif
 
 /* ----
- * = Section 4. Log Buffer =
- * ----
- */
-
-/* ----
- * = Section 5. Node operation =
+ * = Section 4. Node operation =
  * ----
  */
 
@@ -131,7 +128,7 @@ PAGE* read_node(MPOOL*mp , pgno_t x);
 void addkey2node_log(PAGE* h ,BINTERNAL_LOG* bi_log);
 void addkey2node( PAGE* h, BINTERNAL* bi, indx_t skip);
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
-void genLogFromNode( PAGE* pg);
+void genLogFromNode(BTREE* t, PAGE* pg);
 /*
 int CreateNode(pgno_t nodeID){
 

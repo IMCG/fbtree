@@ -166,6 +166,9 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	t->bt_lorder = b.lorder;
 	t->bt_order = NOT;
 	t->bt_cmp = b.compare;
+    /* It seems OK to not use prefix function 
+     *      t->bt_pfx = NULL;
+     */
 	t->bt_pfx = b.prefix;
 	t->bt_rfd = -1;
 
@@ -318,8 +321,16 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 		goto err;
 	if (!F_ISSET(t, B_INMEM))
 		mpool_filter(t->bt_mp, __bt_pgin, __bt_pgout, t);
+    
+    /* Initialize the log buffer pool */
+	if ((t->bt_logmp =
+	    mpool_open(NULL, t->bt_fd, t->bt_psize, ncache)) == NULL)
+		goto err;
+	if (!F_ISSET(t, B_INMEM))
+		mpool_filter(t->bt_logmp, __bt_pgin, __bt_pgout, t);
+	logpool_init(t);
 
-	/* Create a root page if new tree. */
+    /* Create a root page if new tree. */
 	if (nroot(t) == RET_ERROR)
 		goto err;
 

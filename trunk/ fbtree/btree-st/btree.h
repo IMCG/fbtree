@@ -321,7 +321,7 @@ typedef struct _btmeta {
 /* The in-memory btree/recno data structure. */
 typedef struct _btree {
 	MPOOL	 *bt_mp;		/* memory pool cookie */
-
+    MPOOL    *bt_logmp;     /* log buffer */
 	DB	 *bt_dbp;		/* pointer to enclosing DB */
 
 	EPG	  bt_cur;		/* current (pinned) page */
