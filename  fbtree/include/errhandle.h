@@ -27,7 +27,8 @@ typedef	void	Sigfunc(int);	/* for signal handlers */
 #define	max(a,b)	((a) > (b) ? (a) : (b))
 
 
-void	err_debug(const char *, ...);	/* {App misc_source} */
+void	err_debug(const char *, ...);
+void	err_debug0(const char *, ...);	
 void	err_dump(const char *, ...);	/* {App misc_source} */
 void	err_msg(const char *, ...);
 void	err_quit(const char *, ...);

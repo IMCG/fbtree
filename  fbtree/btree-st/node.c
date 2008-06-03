@@ -272,15 +272,17 @@ void genLogFromNode(BTREE* t, PAGE* pg){
     NTTEntry* e;
     pgno_t pgno,npgno;
     pgno = P_INVALID;
+    err_debug("====?");
     for (i=0; i<NEXTINDEX(pg); i++){
         bi = GETBINTERNAL(pg,i);
         assert(bi!=NULL);
         e = NTT_get(pg->pgno);
+         
         bi_log = disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
-
+        
         /* TODO XXX ensure atomic operation we should compute the size first */
         npgno = logpool_put(t,bi_log); 
-        
+
         e->maxSeq++;
         e->logVersion++;
         //XXX e is refecthed in NTT_add_pgno

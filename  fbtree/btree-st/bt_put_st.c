@@ -138,6 +138,9 @@ storekey:		if (__ovfl_put(t, key, &pg) == RET_ERROR)
         }
 	h = e->page;
 	index = e->index;
+#ifdef BT_PUT_DEBUG
+    err_debug("find index s.t. K(index) =< key < K(index+1) ");
+#endif
 	/* ----
      * = Step 2. Insert key/data into the tree =
      * ----
@@ -179,6 +182,9 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 	 */
 	nbytes = NBLEAFDBT(key->size, data->size);
 	if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
+#ifdef BT_PUT_DEBUG
+    err_debug("leaf room is not enough, split");
+#endif
 		if ((status = __bt_split_st(t, h, key,
 		    data, dflags, nbytes, index)) != RET_SUCCESS){
 			return (status);
@@ -190,6 +196,9 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
      * FIXME
      * leaf is always in disk mode here
      */
+#ifdef BT_PUT_DEBUG
+    err_debug("leaf room is enough, insert");
+#endif
 	if (index < (nxtindex = NEXTINDEX(h)))
 		memmove(h->linp + index + 1, h->linp + index,
 		    (nxtindex - index) * sizeof(indx_t));
@@ -258,6 +267,7 @@ bt_fast(t, key, data, exactp)
 	const DBT *key, *data;
 	int *exactp;
 {
+    const char* err_loc = "(bt_fast) in 'bt_put_st.c'";
 	PAGE *h;
 	u_int32_t nbytes;
 	int cmp;
@@ -300,7 +310,7 @@ bt_fast(t, key, data, exactp)
 	++bt_cache_hit;
 #endif
     //TODO-DEBUG
-    err_debug("HIT cache!\n");
+    err_debug("HIT cache: %s", err_loc);
 	return (&t->bt_cur);
 
 miss:

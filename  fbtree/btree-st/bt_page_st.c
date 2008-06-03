@@ -101,9 +101,5 @@ __bt_new( BTREE *t, pgno_t *npg)
      */
     assert(h!=NULL);
     h->pgno = *npg;
-    //TODO:ing
-    err_debug("npg = %ud",*npg);
-    err_debug("here");
-    NTT_add(h);
 	return (h);
 }

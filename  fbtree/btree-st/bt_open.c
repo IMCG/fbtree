@@ -332,7 +332,7 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 		mpool_filter(t->bt_logmp, __bt_pgin, __bt_pgout, t);
 #endif
 	logpool_init(t);
-    
+    NTT_init(); 
     /* Create a root page if new tree. */
 	if (nroot(t) == RET_ERROR)
 		goto err;
