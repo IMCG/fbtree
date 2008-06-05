@@ -91,15 +91,21 @@ __bt_new( BTREE *t, pgno_t *npg)
 	    (h = mpool_get(t->bt_mp, t->bt_free, 0)) != NULL) {
 		*npg = t->bt_free;
 		t->bt_free = h->nextpg;
+#ifdef MPOOL_DEBUG
+        err_debug("new page %ud from the freelist",*npg);
+#endif
 	}
     else{
 	    h= mpool_new(t->bt_mp, npg);
     }
     /* @mx 
-     * In the original version, the function don't set 'h->pgno= *npg' directly. It set it outside.
+     * In the original version, the function don't initialize h.
+     * IMHO, it's not a good design, since some initial value can be default
      * Here we set it. It won't affect other code either since they'll reset it
      */
     assert(h!=NULL);
     h->pgno = *npg;
+	h->lower = BTDATAOFF;
+	h->upper = t->bt_psize;
 	return (h);
 }

@@ -146,7 +146,7 @@ void logpool_put(BTREE* t ,BINTERNAL_LOG* bi){
     PAGE* logbuf;
     logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
     
-    WR_BINTERNAL_LOG(logbuf, bi);
+    append_log_bi(logbuf, bi);
 
     assert(bi!=NULL);
     free(bi);

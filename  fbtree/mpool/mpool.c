@@ -144,7 +144,10 @@ mpool_new(mp, pgnoaddr)
 	head = &mp->hqh[HASHKEY(bp->pgno)];
 	CIRCLEQ_INSERT_HEAD(head, bp, hq);
 	CIRCLEQ_INSERT_TAIL(&mp->lqh, bp, q);
-	return (bp->page);
+#ifdef MPOOL_DEBUG
+	err_debug("new page %ud",bp->pgno);
+#endif
+    return (bp->page);
 }
 
 /*
@@ -162,6 +165,9 @@ mpool_get(mp, pgno, flags)
 	off_t off;
 	int nr;
 
+#ifdef MPOOL_DEBUG
+    err_debug("get page %ud",pgno);
+#endif 
 	/* Check for attempt to retrieve a non-existent page. */
 	if (pgno >= mp->npages) {
 		errno = EINVAL;
@@ -174,6 +180,8 @@ mpool_get(mp, pgno, flags)
 
 	/* Check for a page that is cached. */
 	if ((bp = mpool_look(mp, pgno)) != NULL) {
+        //TODO: temp comment
+#if 0
 #ifdef DEBUG
 		if (bp->flags & MPOOL_PINNED) {
 			(void)fprintf(stderr,
@@ -181,6 +189,8 @@ mpool_get(mp, pgno, flags)
 			abort();
 		}
 #endif
+#endif 
+        
 		/*
 		 * Move the page to the head of the hash chain and the tail
 		 * of the lru chain.
@@ -243,11 +253,14 @@ mpool_put(mp, page, flags)
 	u_int flags;
 {
 	BKT *bp;
-
 #ifdef STATISTICS
 	++mp->pageput;
 #endif
 	bp = (BKT *)((char *)page - sizeof(BKT));
+    
+#ifdef MPOOL_DEBUG
+    err_debug("put page %ud",bp->pgno);
+#endif 
 #ifdef DEBUG
 	if (!(bp->flags & MPOOL_PINNED)) {
 		(void)fprintf(stderr,
