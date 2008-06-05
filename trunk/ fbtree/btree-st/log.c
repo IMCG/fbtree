@@ -1,6 +1,33 @@
 #include "btree.h"
 
 static void mpool_sync_page(MPOOL* mp, pgno_t pg);
+/* ----
+ * = LOG Entry =
+ * ----
+ */
+/**
+ * append_log_bi - Append a BINTERNAL_LOG 'bi_log' to the PAGE p
+ * @p: page header of the dest page
+ * @bi_log: internal log entry to insert
+ *
+ * It computes the dest to append and then use WR_BINTERNAL_LOG to copy the log entry to the PAGE
+ */
+void append_log_bi(PAGE* p , BINTERNAL_LOG* bi_log){
+    indx_t index;
+    char* dest;
+    u_int32_t nbytes;
+    
+    assert(p!=NULL);
+
+    nbytes = NBINTERNAL_LOG(bi_log->ksize);
+    index = NEXTINDEX(p);
+    p->lower += sizeof(indx_t); 
+    p->linp[index] = p->upper-=nbytes;
+    dest = (char*)p + p->upper; 
+
+    WR_BINTERNAL_LOG(dest, bi_log);
+   
+}
 /**
  * disk2log - convert a btree internal's entry of disk mode into log mode
  *
@@ -75,18 +102,28 @@ void logpool_init(BTREE* t){
 pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
     const char* err_loc = "function (logpool_put) in 'log.c'";
     u_int32_t nbytes;
+    indx_t index;
 
-    nbytes = NBINTERNAL_DISK_FROM_LOG(bi_log);
+    nbytes = NBINTERNAL_LOG(bi_log->ksize);
     // first call
-    if (logbuf == NULL)
+    if (logbuf == NULL){
+#ifdef LOG_DEBUG
+        err_debug0("Open a new log buffer pool: ");
+#endif
         logbuf = __bt_new(t,&pgno_logbuf);
+    }
+
 #ifdef LOG_DEBUG
-    err_debug("put a log into the log buffer pool");
+    err_debug("Before put a log into the log buffer pool: size = %ud, left = %ud", nbytes,logbuf->upper-logbuf->lower);
 #endif
+
 	if (logbuf->upper - logbuf->lower < nbytes + sizeof(indx_t)) {
-#ifdef LOG_DEBUG
-        err_debug("log buffer is full. flush~~");
-#endif
+
+#ifdef LOG_DEBUG    //{{{
+        err_debug("Flush the full log buffer: ");
+#endif //}}}
+
+        mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
         mpool_sync_page(t->bt_mp,pgno_logbuf);
         logbuf = __bt_new(t,&pgno_logbuf);
         // ??? after sync, the page still be pinned?
@@ -94,12 +131,49 @@ pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
         logbuf->prevpg = logbuf->nextpg = P_INVALID;
 	    logbuf->lower = BTDATAOFF;
 	    logbuf->upper = t->bt_psize;
+        //TODO: logbuf->flags =
     }
-    WR_BINTERNAL_LOG(logbuf, bi_log);
-//?    mpool_put(mp,pgno_logbuf,MPOOL_DIRTY);
+
+    append_log_bi(logbuf, bi_log);
+
+#ifdef LOG_DEBUG
+    err_debug("After put a log into the log buffer pool: size = %ud, left = %ud", nbytes,logbuf->upper-logbuf->lower);
+#endif
+
+    //mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
     return pgno_logbuf;
 }
-
+/**
+ * genLogFromNode - generate log entries from a disk mode node AND put them into log buffer.
+ * @pg: the node's page lister
+ * 
+ * we convert the real node into a set of log entries
+ */
+void genLogFromNode(BTREE* t, PAGE* pg){
+    unsigned int i;
+    BINTERNAL* bi;
+    BINTERNAL_LOG* bi_log;
+    NTTEntry* e;
+    pgno_t pgno,npgno;
+    pgno = P_INVALID;
+    for (i=0; i<NEXTINDEX(pg); i++){
+        bi = GETBINTERNAL(pg,i);
+        assert(bi!=NULL);
+        e = NTT_get(pg->pgno);
+         
+        bi_log = disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
+        
+        /* TODO XXX ensure atomic operation we should compute the size first */
+        npgno = logpool_put(t,bi_log); 
+        e->maxSeq++;
+        e->logVersion++;
+        //XXX e is refecthed in NTT_add_pgno
+        if(npgno!=pgno){
+            NTT_add_pgno(pg->pgno,npgno);
+            pgno = npgno;
+        }
+    }
+}
 /**
  * mpool_sync_page - Write the pg
  *

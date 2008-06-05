@@ -56,14 +56,16 @@ typedef struct _binternal_log{
 #define NBINTERNAL_LOG(len)							\
 	LALIGN(sizeof(u_int32_t) + 2*sizeof(pgno_t) + 2*sizeof(u_int32_t) + sizeof(u_char) + (len))
 
-/* Get the number of bytes in the entry by the disk mode entry 'bi' */
+/* Get the number of bytes in the log mode entry by the disk mode entry 'bi' */
 #define NBINTERNAL_LOG_FROM_DISK(bi)    \
     LALIGN( NBINTERNAL(bi->ksize) +  sizeof(pgno_t) + 2*sizeof(u_int32_t))
-/* Get the number of bytes in the entry by the log mode entry 'bi' */
+/* Get the number of bytes in the disk mode entry by the log mode entry 'bi' */
 #define NBINTERNAL_DISK_FROM_LOG(bi_log)    \
     LALIGN( NBINTERNAL_LOG(bi_log->ksize) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
 
-/* Copy a BINTERNAL_LOG entry to the page. */
+/* Copy a BINTERNAL_LOG entry to the page.
+ * Note: p should be the destination to insert. It can also used to copy a binternal_log to another binternal_log (i.e. p=binternal_log)
+ */
 #define	WR_BINTERNAL_LOG(p, binternal) {				\
 	*(u_int32_t *)p = binternal->ksize;			\
 	p += sizeof(u_int32_t);						\
@@ -80,27 +82,9 @@ typedef struct _binternal_log{
     strncpy((char*)p, binternal->bytes, binternal->ksize);  \
 }
 
-/**
- * disk2log - convert a btree internal's entry of disk mode into log mode
- *
- * @bi: binternal entry with disk mode
- * @seqnum: sequence number of the new log entry 
- * @logVersion: version of the new log entry 
- * 
- * @return: binternal entry with log mode
- *
- * TODO we only deal with ADD_KEY here
- */
+
+void append_log_bi(PAGE* p , BINTERNAL_LOG* bi_log);
 BINTERNAL_LOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
-/**
- * disk2log - convert a btree internal's entry of disk mode into log mode
- *
- * @bi_log: binternal entry with log mode 
- * 
- * @return: new binternal entry with disk mode
- *
- * TODO we only deal with ADD_KEY here
- */
 BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log);
 /* ----
  * = Section 3. Log Buffer =

@@ -65,9 +65,9 @@ void testBT(){
         k = (u_int32_t)i;
         d = (u_int32_t)i*i;
 
+        err_debug("= BEGIN PUT (%d,%d) =\n", *(int*)key.data,*(int*)data.data);
         rc = dbp->put(dbp, &key, &data, R_NOOVERWRITE);
         
-        err_debug("insert (%d,%d)\n", *(int*)key.data,*(int*)data.data);
         
         if(rc!=RET_SUCCESS){
             err_quit("db put error");
@@ -81,6 +81,7 @@ void testBT(){
         rdata.size=0;
         rdata.data=NULL;
 
+        err_debug("= BEGIN GET =\n");
         rc = dbp->get(dbp,&rkey,&rdata,0);
         if(rc==-1){
             err_quit("error while try to get ");

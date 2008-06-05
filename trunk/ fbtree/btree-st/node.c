@@ -20,9 +20,14 @@ static void __log_collect( LogList* logCollector, BINTERNAL_LOG* bi_log){
     WR_BINTERNAL_LOG(bi,bi_log);
     tmp->log = bi;
     list_add(&(tmp->list),&(logCollector->list));
+}
+/*
+ * Free the memory of log list
+ */
+static void __log_free( LogList* logCollector){
+
 
 }
-
 /* 
  * Rebuild Node from the LogList 'list' 
  *
@@ -125,7 +130,9 @@ PAGE* read_node(MPOOL*mp , pgno_t x){
         }
         h = mpool_get(mp,x,0);
         // construct the actual node of the page
-        return __rebuild_node(h,&logCollector);
+        __rebuild_node(h,&logCollector);
+        __log_free(&logCollector);
+        return h;
     }
     else{
         err_quit("unknown mode of node: %s",err_loc);
@@ -257,38 +264,4 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
 	index = base ? base - 1 : base;
     return index;
 }
-/*
- *
- * genLogFromNode - generate log entries from a disk mode node AND put them into log buffer.
- * @pg: the node's page lister
- * 
- * we convert the real node into a set of log entries
- * FIXME the interface has been changed
- */
-void genLogFromNode(BTREE* t, PAGE* pg){
-    unsigned int i;
-    BINTERNAL* bi;
-    BINTERNAL_LOG* bi_log;
-    NTTEntry* e;
-    pgno_t pgno,npgno;
-    pgno = P_INVALID;
-    err_debug("====?");
-    for (i=0; i<NEXTINDEX(pg); i++){
-        bi = GETBINTERNAL(pg,i);
-        assert(bi!=NULL);
-        e = NTT_get(pg->pgno);
-         
-        bi_log = disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
-        
-        /* TODO XXX ensure atomic operation we should compute the size first */
-        npgno = logpool_put(t,bi_log); 
 
-        e->maxSeq++;
-        e->logVersion++;
-        //XXX e is refecthed in NTT_add_pgno
-        if(npgno!=pgno){
-            NTT_add_pgno(pg->pgno,npgno);
-            pgno = npgno;
-        }
-    }
-}
