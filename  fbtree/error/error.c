@@ -7,7 +7,7 @@ static void	err_doit0(int, const char *, va_list);
 
 char	*pname = NULL;		/* caller can set this from argv[0] */
 
-int	do_we_log_this(const char *){
+int	do_we_log_this(const char * filename){
     return 1;
 }
 /* err_debug - Output the message to stderr for debug

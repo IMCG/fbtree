@@ -114,7 +114,7 @@ typedef struct _bleaf_log{
  * ----
  */
 
-PAGE* read_node(MPOOL*mp , pgno_t x);
+PAGE* read_node(BTREE* mp , pgno_t x);
 void addkey2node_log(PAGE* h ,BINTERNAL_LOG* bi_log);
 void addkey2node( PAGE* h, BINTERNAL* bi, indx_t skip);
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);

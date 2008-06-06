@@ -73,8 +73,8 @@ BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log){
  * BINTERNAL currently.
  */
 void log_dump(BINTERNAL_LOG* bi){
-    err_debug("[ ksize=%ud, nodeID=%ud, pgno=%ud, seqnum=%ud, logVersion=%ud ]",
-                bi->ksize, bi->nodeID, bi->pgno, bi->seqnum, bi->logVersion);
+    err_debug(("[ ksize=%ud, nodeID=%ud, pgno=%ud, seqnum=%ud, logVersion=%ud ]",
+                bi->ksize, bi->nodeID, bi->pgno, bi->seqnum, bi->logVersion));
 
 }
 
@@ -121,7 +121,7 @@ pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
     }
 
 #ifdef LOG_DEBUG
-    err_debug("Before put a log into the log buffer pool: size = %ud, left = %ud", nbytes,logbuf->upper-logbuf->lower);
+    err_debug(("Before put a log into the log buffer pool: size = %ud, left = %ud", nbytes,logbuf->upper-logbuf->lower));
 #endif
 
 	if (logbuf->upper - logbuf->lower < nbytes + sizeof(indx_t)) {
@@ -149,7 +149,7 @@ pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
     err_debug0("append log: ");
     log_dump(bi_log);
 #ifdef LOG_DEBUG
-    err_debug("After put a log into the log buffer pool: size = %ud, left = %ud", nbytes + sizeof(indx_t),logbuf->upper-logbuf->lower);
+    err_debug(("After put a log into the log buffer pool: size = %ud, left = %ud", nbytes + sizeof(indx_t),logbuf->upper-logbuf->lower));
 #endif
 
     return pgno_logbuf;

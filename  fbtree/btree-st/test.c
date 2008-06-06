@@ -65,7 +65,7 @@ void testBT(){
         k = (u_int32_t)i;
         d = (u_int32_t)i*i;
 
-        err_debug("= BEGIN PUT (%d,%d) =", *(int*)key.data,*(int*)data.data);
+        err_debug1("= BEGIN PUT (%d,%d) =", *(int*)key.data,*(int*)data.data);
         rc = dbp->put(dbp, &key, &data, R_NOOVERWRITE);
         
         
@@ -81,16 +81,16 @@ void testBT(){
         rdata.size=0;
         rdata.data=NULL;
 
-        err_debug("\n= BEGIN GET =");
+        err_debug1("\n= BEGIN GET =");
         rc = dbp->get(dbp,&rkey,&rdata,0);
         if(rc==-1){
             err_quit("error while try to get ");
         }
         else if(rc==0){
-            err_debug("find the pair (%d,%d)", *(int*)rkey.data,*(int*)rdata.data);
+            err_debug1("find the pair (%d,%d)", *(int*)rkey.data,*(int*)rdata.data);
         }
         else{
-            err_debug("not in the database");
+            err_debug1("not in the database");
         }
     }
     //__bt_dump(dbp);

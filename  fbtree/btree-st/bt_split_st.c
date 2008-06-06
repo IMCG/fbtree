@@ -106,7 +106,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 * are pinned.
 	 */
 #ifdef BT_SPLIT_DEBUG
-    err_debug("First, split PAGE %ud",sp->pgno);
+    err_debug(("First, split PAGE %ud",sp->pgno));
 #endif
     /* h is page to insert data */
 	h = sp->pgno == P_ROOT ?
@@ -661,7 +661,7 @@ bt_broot(t, h, l, r)
         /* TODO XXX we suppose all the internal node is log mode */
         /* TODO: NTT sector list should be changed */
 #ifdef NTT_DEBUG
-        err_debug("Change root into (INTERNAL|LOG)");
+        err_debug(("Change root into (INTERNAL|LOG)"));
 #endif
         entry->flags = NODE_INTERNAL | NODE_LOG;
 

@@ -51,6 +51,7 @@ static char sccsid[] = "@(#)mpool.c	8.5 (Berkeley) 7/26/94";
 #endif
 #define	__MPOOLINTERFACE_PRIVATE
 #include "mpool.h"
+#include "errhandle.h"
 
 static BKT *mpool_bkt __P((MPOOL *));
 static BKT *mpool_look __P((MPOOL *, pgno_t));
@@ -145,7 +146,7 @@ mpool_new(mp, pgnoaddr)
 	CIRCLEQ_INSERT_HEAD(head, bp, hq);
 	CIRCLEQ_INSERT_TAIL(&mp->lqh, bp, q);
 #ifdef MPOOL_DEBUG
-	err_debug("new page %ud",bp->pgno);
+	err_debug(("new page %ud",bp->pgno));
 #endif
     return (bp->page);
 }
@@ -166,7 +167,7 @@ mpool_get(mp, pgno, flags)
 	int nr;
 
 #ifdef MPOOL_DEBUG
-    err_debug("get page %ud",pgno);
+    err_debug(("get page %ud",pgno));
 #endif 
 	/* Check for attempt to retrieve a non-existent page. */
 	if (pgno >= mp->npages) {
@@ -259,8 +260,8 @@ mpool_put(mp, page, flags)
 	bp = (BKT *)((char *)page - sizeof(BKT));
     
 #ifdef MPOOL_DEBUG
-    err_debug("put page %ud",bp->pgno);
-#endif 
+    err_debug(("put page %ud",bp->pgno));
+#endif
 #ifdef DEBUG
 	if (!(bp->flags & MPOOL_PINNED)) {
 		(void)fprintf(stderr,
@@ -423,7 +424,7 @@ mpool_look(mp, pgno)
 			++mp->cachehit;
 #endif
 #ifdef MPOOL_DEBUG
-    err_debug("found");
+    err_debug(("found"));
 #endif 
 			return (bp);
 		}
@@ -431,7 +432,7 @@ mpool_look(mp, pgno)
 	++mp->cachemiss;
 #endif
 #ifdef MPOOL_DEBUG
-    err_debug("not found");
+    err_debug(("not found"));
 #endif 
 	return (NULL);
 }

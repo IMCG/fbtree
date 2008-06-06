@@ -43,10 +43,9 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
     const char* err_loc = "function (__rebuild_node) in 'node.c'";
 
 #ifdef NODE_DEBUG
-    err_debug("rebuild node %d", h->pgno);
+    err_debug(("rebuild node %d", h->pgno));
 #endif
-
-
+    assert(h->flags & P_BINTERNAL);
     /* TODO sort the log entry by seqnum
      * XXX
      * you must sort the list to make it in order
@@ -75,15 +74,15 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
 /**
  * read_node - read Node[x] from mp
  *
- * @mp: buffer pool
+ * @t: btree
  * @x: pgno of the node, i.e. id of the node
  *
  * Read a node x from NTT.
  * If it's in disk mode, read it dorectly.
  * Otherwise, it's in log mode, collect all logs then rebuild the node.
  */
-PAGE* read_node(MPOOL*mp , pgno_t x){
-    const char* err_loc = "function (read_node) in 'node.c'";
+PAGE* read_node(BTREE*t , pgno_t x){
+    const char* err_loc = "(read_node)";
     PAGE *h;
     pgno_t pg;
     BINTERNAL_LOG * bi_log;
@@ -94,23 +93,21 @@ PAGE* read_node(MPOOL*mp , pgno_t x){
     int version;    /* latest version of current node */
     SectorList* head;/* head of the list */
     SectorList* slist;
+    MPOOL* mp= t->bt_mp;
 
     entry = NTT_get(x);
     if( entry->flags & NODE_DISK){
         h = mpool_get(mp,x,0);
-#ifdef NODE_DEBUG
-        err_debug("%s node %ud in DISK mode : %s", (h->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,x,err_loc);
-#endif
+        err_debug(("node %u: DISK|%s : %s",x,(h->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
         return h;
     }
     else if(entry->flags & NODE_LOG){
-#ifdef NODE_DEBUG
-        err_debug("%s node %ud in LOG mode : %s", (entry->flags & NODE_INTERNAL) ? "INTERNAL": "LEAF" ,x,err_loc);
-#endif
+        err_debug(("node %u: LOG|%s : %s",x,(entry->flags & NODE_INTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
         INIT_LIST_HEAD(&logCollector.list);
         version = entry->logVersion;
         head = &(entry->list);
 
+        err_debug(("~~^\niterate sector list"));
         // iterate the list
         list_for_each_entry(slist , &(head->list) , list ){
 
@@ -131,9 +128,14 @@ PAGE* read_node(MPOOL*mp , pgno_t x){
             }
             mpool_put(mp,h,0);
         }
+        err_debug(("~~$"));
         h = mpool_get(mp,x,0);
+
         // construct the actual node of the page
+        err_debug(("~~^\nrebuild node"));
+        PAGE_INIT(t,h);
         __rebuild_node(h,&logCollector);
+        err_debug(("~~$"));
         __log_free(&logCollector);
         return h;
     }
