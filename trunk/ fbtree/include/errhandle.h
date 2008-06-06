@@ -26,9 +26,14 @@ typedef	void	Sigfunc(int);	/* for signal handlers */
 #define	min(a,b)	((a) < (b) ? (a) : (b))
 #define	max(a,b)	((a) > (b) ? (a) : (b))
 
-
-void	err_debug(const char *, ...);
+#define err_debug(args) do{ \
+    if(do_we_log_this(__FILE__)){ \
+        err_debug0("%s:%d: ",__FILE__,__LINE__); \
+        err_debug1 args ;\
+    }}while(0);
+int do_we_log_this(const char *);
 void	err_debug0(const char *, ...);	
+void	err_debug1(const char *, ...);	
 void	err_dump(const char *, ...);	/* {App misc_source} */
 void	err_msg(const char *, ...);
 void	err_quit(const char *, ...);
@@ -40,11 +45,4 @@ void	log_open(const char *, int, int);
 void	log_quit(const char *, ...);
 void	log_ret(const char *, ...);
 void	log_sys(const char *, ...);
-
-void	TELL_WAIT(void);		/* parent/child from {Sec race_conditions} */
-void	TELL_PARENT(pid_t);
-void	TELL_CHILD(pid_t);
-void	WAIT_PARENT(void);
-void	WAIT_CHILD(void);
-
 #endif	/* __ourhdr_h */

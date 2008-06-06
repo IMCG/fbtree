@@ -6,11 +6,15 @@ static void	err_doit(int, const char *, va_list);
 static void	err_doit0(int, const char *, va_list);
 
 char	*pname = NULL;		/* caller can set this from argv[0] */
+
+int	do_we_log_this(const char *){
+    return 1;
+}
 /* err_debug - Output the message to stderr for debug
  * Print a message and return
  */
 void
-err_debug(const char *fmt, ...)
+err_debug1(const char *fmt, ...)
 {
 	va_list		ap;
 

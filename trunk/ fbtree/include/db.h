@@ -73,7 +73,8 @@ typedef	unsigned long long	u_int64_t;
 #endif
 #endif
 
-#define	MAX_PAGE_NUMBER	0xffffffff	/* >= # of pages in a file */
+//#define	MAX_PAGE_NUMBER	0xffffffff	/* >= # of pages in a file */
+#define	MAX_PAGE_NUMBER	    0x000000ff	/* >= # of pages in a file */
 typedef u_int32_t	pgno_t;
 #define	MAX_PAGE_OFFSET	65535		/* >= # of bytes in a page */
 typedef u_int16_t	indx_t;

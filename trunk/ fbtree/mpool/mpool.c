@@ -180,7 +180,7 @@ mpool_get(mp, pgno, flags)
 
 	/* Check for a page that is cached. */
 	if ((bp = mpool_look(mp, pgno)) != NULL) {
-        //TODO: temp comment
+        /* IMHO: the code is not necessary */
 #if 0
 #ifdef DEBUG
 		if (bp->flags & MPOOL_PINNED) {
@@ -189,7 +189,7 @@ mpool_get(mp, pgno, flags)
 			abort();
 		}
 #endif
-#endif 
+#endif
         
 		/*
 		 * Move the page to the head of the hash chain and the tail
@@ -413,18 +413,26 @@ mpool_look(mp, pgno)
 {
 	struct _hqh *head;
 	BKT *bp;
-
+#ifdef MPOOL_DEBUG
+    err_debug0("look up page %ud in cache: ",pgno); 
+#endif 
 	head = &mp->hqh[HASHKEY(pgno)];
 	for (bp = head->cqh_first; bp != (void *)head; bp = bp->hq.cqe_next)
 		if (bp->pgno == pgno) {
 #ifdef STATISTICS
 			++mp->cachehit;
 #endif
+#ifdef MPOOL_DEBUG
+    err_debug("found");
+#endif 
 			return (bp);
 		}
 #ifdef STATISTICS
 	++mp->cachemiss;
 #endif
+#ifdef MPOOL_DEBUG
+    err_debug("not found");
+#endif 
 	return (NULL);
 }
 

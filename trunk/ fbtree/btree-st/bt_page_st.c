@@ -92,7 +92,7 @@ __bt_new( BTREE *t, pgno_t *npg)
 		*npg = t->bt_free;
 		t->bt_free = h->nextpg;
 #ifdef MPOOL_DEBUG
-        err_debug("new page %ud from the freelist",*npg);
+        err_debug(("new page %ud from the freelist",*npg));
 #endif
 	}
     else{
