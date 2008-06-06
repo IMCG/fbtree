@@ -27,10 +27,10 @@ EPG *
 __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 {
 
-    /* 
+    /*
      * 1.Read from root of the btree in NTT
      * 2.reconstruct the node
-     */	
+     */
     // read node from ROOT
     // loop until we find the right node
 
@@ -41,12 +41,12 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 
 	BT_CLR(t);  /* @mx it initializes t->bt_sp  */
 	for (pg = P_ROOT;;) {
-        err_debug("~~~read node %ud",pg);  
-        h = read_node(t->bt_mp,pg);
-        err_debug("~~~");
+        err_debug1("~^");
+        err_debug(("read Node %ud",pg));
+        h = read_node(t,pg);
+        err_debug1("~$");
         if(h==NULL)
 			return (NULL);
-
         /* ??? not so clear about the binary search */
 		/* Do a binary search on the current page. */
 		t->bt_cur.page = h;

@@ -8,6 +8,7 @@
 #include	<stdlib.h>		/* for convenience */
 #include	<string.h>		/* for convenience */
 #include	<unistd.h>		/* for convenience */
+#include	<string.h>
 
 #define	MAXLINE	4096			/* max line length */
 
@@ -28,12 +29,15 @@ typedef	void	Sigfunc(int);	/* for signal handlers */
 
 #define err_debug(args) do{ \
     if(do_we_log_this(__FILE__)){ \
-        err_debug0("%s:%d: ",__FILE__,__LINE__); \
-        err_debug1 args ;\
+        const char* name = strrchr(__FILE__,'/'); \
+        err_debug0("%s:%d:\t", name ? name+1 : __FILE__, __LINE__); \
+        err_debug1 args ; \
     }}while(0);
-int do_we_log_this(const char *);
-void	err_debug0(const char *, ...);	
-void	err_debug1(const char *, ...);	
+        //err_debug0("%s:%d: ", __FILE__ , __LINE__);\
+        //err_debug0("%s:%d: ", (char*)(strrchr(__FILE__,'/')+1) , __LINE__);
+int     do_we_log_this(const char *);
+void	err_debug0(const char *, ...);
+void	err_debug1(const char *, ...);
 void	err_dump(const char *, ...);	/* {App misc_source} */
 void	err_msg(const char *, ...);
 void	err_quit(const char *, ...);

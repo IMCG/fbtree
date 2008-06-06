@@ -103,6 +103,14 @@ typedef struct _page {
 	    sizeof(u_int32_t) + sizeof(indx_t) + sizeof(indx_t))
 #define	NEXTINDEX(p)	(((p)->lower - BTDATAOFF) / sizeof(indx_t))
 
+/*initialize a new page */
+#define PAGE_INIT(t,h) \
+	h->lower  = BTDATAOFF; \
+	h->upper  = t->bt_psize; \
+	h->nextpg = NULL; \
+	h->prevpg = NULL; 
+
+
 /*
  * For pages other than overflow pages, there is an array of offsets into the
  * rest of the page immediately following the page header.  Each offset is to

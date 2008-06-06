@@ -24,7 +24,7 @@ int NTT_init(){
  */
 NTTEntry* NTT_get(pgno_t pgno){
     //const char* err_loc = "function (NTT_get) in NTT.c";
-    //err_debug("pgno = %ud\n", pgno);
+    //err_debug(("pgno = %ud\n", pgno));
     assert( pgno > 0 && pgno<= NTT_MAXSIZE);
     
     return &NTT[pgno];
@@ -61,14 +61,14 @@ void NTT_add(PAGE* pg){
     if(pg->flags & P_BLEAF){
         entry->flags = NODE_DISK | NODE_LEAF;
 #ifdef NTT_DEBUG
-        err_debug("Add the (DISK|LEAF) PAGE %ud to the NTT", pgno);
+        err_debug(("Add the (DISK|LEAF) PAGE %ud to the NTT", pgno));
 #endif
     }
     else if(pg->flags & P_BINTERNAL){
         /* FIXME it should be ? */
         entry->flags = NODE_INTERNAL | NODE_LOG;
 #ifdef NTT_DEBUG
-        err_debug("Add the (LOG|INTERNAL) PAGE %ud to the NTT", pgno);
+        err_debug(("Add the (LOG|INTERNAL) PAGE %ud to the NTT", pgno));
 #endif
     }
     else{
@@ -95,14 +95,12 @@ void NTT_add_pgno(pgno_t nodeID, pgno_t pgno){
     SectorList* nslist;
     
     /* Iterate Sector List to check whether there's duplicate pgno. 
-     * It will be too slow if we check it every time. 
+     * XXX It will be too slow if we check it every time. 
      */
-#ifdef NTT_DEBUG
     list_for_each_entry(nslist,&slist->list,list){
-        assert(nslist->pgno!=pgno);
+        if(nslist->pgno==pgno); return;
     }
-    err_debug("Add pgno %ud to the sector list of NTT[%ud]",pgno,nodeID);
-#endif
+    err_debug(("Add pgno %ud to the sector list of NTT[%ud]",pgno,nodeID));
 
     nslist= malloc(sizeof(SectorList));
     if(nslist==NULL)    err_sys("error while malloc sector list: %s",err_loc);

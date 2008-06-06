@@ -96,7 +96,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 		if (key->size > t->bt_ovflsize) {
 storekey:		if (__ovfl_put(t, key, &pg) == RET_ERROR)
 				return (RET_ERROR);
-			tkey.data = kb;
+tkey.data = kb;
 			tkey.size = NOVFLSIZE;
 			memmove(kb, &pg, sizeof(pgno_t));
 			memmove(kb + sizeof(pgno_t),
@@ -203,7 +203,7 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
      * leaf is always in disk mode here
      */
 #ifdef BT_PUT_DEBUG
-    err_debug("leaf room is enough, insert");
+    err_debug(("leaf room is enough, insert"));
 #endif
 	if (index < (nxtindex = NEXTINDEX(h)))
 		memmove(h->linp + index + 1, h->linp + index,
@@ -316,7 +316,7 @@ bt_fast(t, key, data, exactp)
 	++bt_cache_hit;
 #endif
     //TODO-DEBUG
-    err_debug("HIT cache: %s", err_loc);
+    err_debug(("HIT cache: %s", err_loc));
 	return (&t->bt_cur);
 
 miss:
