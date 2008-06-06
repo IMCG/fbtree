@@ -41,7 +41,9 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 
 	BT_CLR(t);  /* @mx it initializes t->bt_sp  */
 	for (pg = P_ROOT;;) {
+        err_debug("~~~read node %ud",pg);  
         h = read_node(t->bt_mp,pg);
+        err_debug("~~~");
         if(h==NULL)
 			return (NULL);
 

@@ -7,17 +7,19 @@ typedef struct _loglist{
     struct list_head list;
 }LogList;
 
-/* 
+/*
  * Copy bi_log into the log list "logCollector"
  *
  * bi_log is cloned otherwise you have to held the whole page (which bi_log belongs to) in memory
  *
- * XXX you should make a decision here, clone bi_log or keep page in memory 
+ * XXX you should make a decision here, clone bi_log or keep page in memory
  */
 static void __log_collect( LogList* logCollector, BINTERNAL_LOG* bi_log){
+    const char* err_loc ="(log_collect) in 'log.c'";
     LogList* tmp = (LogList*)malloc(sizeof(LogList));
     BINTERNAL_LOG * bi = (BINTERNAL_LOG*)malloc(NBINTERNAL_LOG(bi_log->ksize));
-    WR_BINTERNAL_LOG(bi,bi_log);
+    char* dest = (char*)bi;
+    WR_BINTERNAL_LOG(dest,bi_log);
     tmp->log = bi;
     list_add(&(tmp->list),&(logCollector->list));
 }
@@ -28,8 +30,8 @@ static void __log_free( LogList* logCollector){
 
 
 }
-/* 
- * Rebuild Node from the LogList 'list' 
+/*
+ * Rebuild Node from the LogList 'list'
  *
  * It construct the node by apply the logs in order to 'h'.
  * Return PAGE lister of the new node.
@@ -46,7 +48,7 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
 
 
     /* TODO sort the log entry by seqnum
-     * XXX 
+     * XXX
      * you must sort the list to make it in order
      * but if it's append only, the order is not important
      */
@@ -68,17 +70,17 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
     }
 
     return h;
-} 
+}
 
 /**
  * read_node - read Node[x] from mp
  *
  * @mp: buffer pool
  * @x: pgno of the node, i.e. id of the node
- * 
+ *
  * Read a node x from NTT.
  * If it's in disk mode, read it dorectly.
- * Otherwise, it's in log mode, collect all logs then rebuild the node. 
+ * Otherwise, it's in log mode, collect all logs then rebuild the node.
  */
 PAGE* read_node(MPOOL*mp , pgno_t x){
     const char* err_loc = "function (read_node) in 'node.c'";
@@ -87,12 +89,13 @@ PAGE* read_node(MPOOL*mp , pgno_t x){
     BINTERNAL_LOG * bi_log;
     LogList logCollector;
     int i;
-    
-    NTTEntry*   entry = NTT_get(x);
+
+    NTTEntry*   entry;
     int version;    /* latest version of current node */
     SectorList* head;/* head of the list */
     SectorList* slist;
-    
+
+    entry = NTT_get(x);
     if( entry->flags & NODE_DISK){
         h = mpool_get(mp,x,0);
 #ifdef NODE_DEBUG
@@ -141,21 +144,24 @@ PAGE* read_node(MPOOL*mp , pgno_t x){
 }
 
 
-/** 
+/**
  * addkey2node_log - Apply the internal log entry add to the *internel* node 'h'.
- * 
+ *
  * @h: node to insert
  * @bi_log: log entry
  *
- * XXX We first construct a binternal entry from the log entry, it's not essential. 
+ * XXX We first construct a binternal entry from the log entry, it's not essential.
  * We should apply the log directly for efficiency.
  */
 void addkey2node_log(PAGE* h ,BINTERNAL_LOG* bi_log){
-    
-    BINTERNAL* bi = log2disk_bi(bi_log);
-    indx_t skip;
-    assert(bi!=NULL);
 
+    BINTERNAL* bi;
+    indx_t skip;
+    assert(bi_log !=NULL);
+
+    bi = log2disk_bi(bi_log);
+
+    assert(bi!=NULL);
     skip = search_node(h, bi_log->ksize, bi_log->bytes);
     addkey2node(h,bi,skip);
     free(bi);
@@ -163,11 +169,11 @@ void addkey2node_log(PAGE* h ,BINTERNAL_LOG* bi_log){
 
 /**
  * addkey2node - Insert the key to the new node
- *  
+ *
  * @h: node to insert
  * @bi: BINTERNAL entry
  * @skip: insert position
- * 
+ *
  * TODO currently internal only
  */
 void addkey2node( PAGE* h, BINTERNAL* bi, indx_t skip){
@@ -175,20 +181,19 @@ void addkey2node( PAGE* h, BINTERNAL* bi, indx_t skip){
     char * dest;
 	u_int32_t n, nbytes;
 
-    /* insert key into the skip */
+    assert(bi!=NULL);
+    nbytes = NBINTERNAL(bi->ksize) ;
+    /* move to make room for the new (key,pointer) pair */
     if (skip < (nxtindex = NEXTINDEX(h)))
             memmove(h->linp + skip + 1, h->linp + skip,
                 (nxtindex - skip) * sizeof(indx_t));
+    /* insert key into the skip */
     h->lower += sizeof(indx_t);
-        
-
     h->linp[skip] = h->upper -= nbytes;
     dest = (char *)h + h->linp[skip];
-    memcpy(dest, bi, nbytes);
-    ((BINTERNAL *)dest)->pgno =bi->pgno;
-
-    assert(bi!=NULL);
-    /* TODO maybe we can use it later */    
+    WR_BINTERNAL(dest,bi->ksize,bi->pgno,0);
+	memmove(dest, bi->bytes, bi->ksize);
+    /* TODO maybe we can use it later */
 #if 0
     switch (rchild->flags & P_TYPE) {
     case P_BINTERNAL:
@@ -224,15 +229,15 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
     BINTERNAL* bi;
     int cmp; /* result of compare */
 
-    const char err_loc[] = "function (search_node) in 'node.c'"; 
+    const char err_loc[] = "function (search_node) in 'node.c'";
 
     if(h->flags & P_BLEAF){
         err_quit("not support leaf search yet: %s", err_loc);
     }
-	
+
     k1.size=ksize;
     k1.data=(void*)bytes;
-	
+
 
     /* Do a binary search on the current page. */
     for (base = 0, lim = NEXTINDEX(h); lim; lim >>= 1) {

@@ -41,8 +41,14 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 
 	/* Toss any page pinned across calls. */
 	if (t->bt_pinned != NULL) {
+#ifdef MPOOL_DEBUG
+        err_debug(("Toss any page pinned across calls")); 
+#endif  
 		mpool_put(t->bt_mp, t->bt_pinned, 0);
 		t->bt_pinned = NULL;
+#ifdef MPOOL_DEBUG
+        err_debug(("End Toss\n")); 
+#endif  
 	}
 
 	/* Check for change to a read-only tree. */
@@ -139,7 +145,7 @@ storekey:		if (__ovfl_put(t, key, &pg) == RET_ERROR)
 	h = e->page;
 	index = e->index;
 #ifdef BT_PUT_DEBUG
-    err_debug("find index s.t. K(index) =< key < K(index+1) ");
+    err_debug(("find index s.t. K(index) =< key < K(index+1) "));
 #endif
 	/* ----
      * = Step 2. Insert key/data into the tree =
@@ -183,7 +189,7 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 	nbytes = NBLEAFDBT(key->size, data->size);
 	if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
 #ifdef BT_PUT_DEBUG
-    err_debug("leaf room is not enough, split");
+    err_debug(("leaf room is not enough, split"));
 #endif
 		if ((status = __bt_split_st(t, h, key,
 		    data, dflags, nbytes, index)) != RET_SUCCESS){
