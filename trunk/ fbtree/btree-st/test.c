@@ -4,9 +4,7 @@
 #include <stdlib.h> 
 #include <string.h> 
 #include <fcntl.h>
-/*
- * TODO tmp used for quick test
- */
+
 struct config
 {
 
@@ -60,7 +58,7 @@ void testBT(){
 	}
 	
     NTT_dump();
-    for( i = 0 ; i<4000 ; i++){
+    for( i = 0 ; i<833; i++){
         fprintf(stderr,"----\ni=%d\n",i);
         k = (u_int32_t)i;
         d = (u_int32_t)i*i;
@@ -76,12 +74,13 @@ void testBT(){
         //__bt_dump(dbp);
         
         rk=i/2+1;
+        rk=428;
         rkey.size=4;
         rkey.data=(void*)&rk;
         rdata.size=0;
         rdata.data=NULL;
 
-        err_debug1("\n= BEGIN GET =");
+        err_debug1("\n= BEGIN GET (%d,?)",*(int*)rkey.data);
         rc = dbp->get(dbp,&rkey,&rdata,0);
         if(rc==-1){
             err_quit("error while try to get ");

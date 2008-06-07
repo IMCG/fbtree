@@ -107,16 +107,16 @@ void logpool_init(BTREE* t){
  * XXX we only deal with BINTERNAL_LOG currently
  */
 pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
-    const char* err_loc = "function (logpool_put) in 'log.c'";
+    const char* err_loc = "(logpool_put) in 'log.c'";
     u_int32_t nbytes;
     indx_t index;
+
+    assert(bi_log->nodeID != bi_log->pgno);
 
     nbytes = NBINTERNAL_LOG(bi_log->ksize);
     // first call
     if (logbuf == NULL){
-#ifdef LOG_DEBUG
-        err_debug0("Open a new log buffer pool: ");
-#endif
+        err_debug(("open a new log buffer pool"));
         logbuf = __bt_new(t,&pgno_logbuf);
     }
 
@@ -126,26 +126,27 @@ pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
 
 	if (logbuf->upper - logbuf->lower < nbytes + sizeof(indx_t)) {
 
-#ifdef LOG_DEBUG    //{{{
-        err_debug0("Flush the full log buffer: ");
-#endif //}}}
+#ifdef LOG_DEBUG    
+        err_debug1("flush the full log buffer");
+#endif 
 
         //FIXME tmp design, it should be pinned first, though it is actually
         logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
 
         mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
-        mpool_sync_page(t->bt_mp,pgno_logbuf);
+        //mpool_sync_page(t->bt_mp,pgno_logbuf);
         logbuf = __bt_new(t,&pgno_logbuf);
         // ??? after sync, the page still be pinned?
         logbuf->pgno  = pgno_logbuf;
         logbuf->prevpg = logbuf->nextpg = P_INVALID;
 	    logbuf->lower = BTDATAOFF;
 	    logbuf->upper = t->bt_psize;
-        //TODO: logbuf->flags =
+        //TODO logbuf->flags = 
+
     }
 
     append_log_bi(logbuf, bi_log);
-
+    NTT_add_pgno(bi_log->nodeID,pgno_logbuf);
     err_debug0("append log: ");
     log_dump(bi_log);
 #ifdef LOG_DEBUG
@@ -167,23 +168,31 @@ void genLogFromNode(BTREE* t, PAGE* pg){
     NTTEntry* e;
     pgno_t pgno,npgno;
     pgno = P_INVALID;
+    
+    err_debug0("~^");
+    err_debug(("Generate log entry from node %u",pg->pgno));
+
+    assert(pg->flags & P_BINTERNAL);
+    assert(NEXTINDEX(pg)>0);
+    e = NTT_get(pg->pgno);
     for (i=0; i<NEXTINDEX(pg); i++){
         bi = GETBINTERNAL(pg,i);
         assert(bi!=NULL);
-        e = NTT_get(pg->pgno);
 
         bi_log = disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
 
         /* TODO XXX ensure atomic operation we should compute the size first */
         npgno = logpool_put(t,bi_log);
         e->maxSeq++;
-        e->logVersion++;
         //XXX e is refecthed in NTT_add_pgno
         if(npgno!=pgno){
             NTT_add_pgno(pg->pgno,npgno);
             pgno = npgno;
         }
     }
+    e->logVersion++;
+    err_debug0("~$");
+    err_debug1(("End Generate"));
 }
 /**
  * mpool_sync_page - Write the pg

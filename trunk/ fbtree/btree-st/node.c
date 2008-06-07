@@ -90,7 +90,6 @@ PAGE* read_node(BTREE*t , pgno_t x){
     int i;
 
     NTTEntry*   entry;
-    int version;    /* latest version of current node */
     SectorList* head;/* head of the list */
     SectorList* slist;
     MPOOL* mp= t->bt_mp;
@@ -98,16 +97,21 @@ PAGE* read_node(BTREE*t , pgno_t x){
     entry = NTT_get(x);
     if( entry->flags & NODE_DISK){
         h = mpool_get(mp,x,0);
+#ifdef NODE_DEBUG
         err_debug(("node %u: DISK|%s : %s",x,(h->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
         return h;
+#endif
     }
     else if(entry->flags & NODE_LOG){
+#ifdef NODE_DEBUG
         err_debug(("node %u: LOG|%s : %s",x,(entry->flags & NODE_INTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
+#endif
         INIT_LIST_HEAD(&logCollector.list);
-        version = entry->logVersion;
         head = &(entry->list);
 
+#ifdef NODE_DEBUG
         err_debug(("~~^\niterate sector list"));
+#endif
         // iterate the list
         list_for_each_entry(slist , &(head->list) , list ){
 
@@ -122,20 +126,26 @@ PAGE* read_node(BTREE*t , pgno_t x){
                 // get the log entry
                 bi_log = GETBINTERNAL_LOG(h,i);
                 // if it belongs to the node x , collect it
-                if( bi_log->nodeID==x){
+                if( bi_log->nodeID==x && bi_log->logVersion==entry->logVersion){
                     __log_collect(&logCollector,bi_log);
                 }
             }
             mpool_put(mp,h,0);
         }
+#ifdef NODE_DEBUG
         err_debug(("~~$"));
+#endif
         h = mpool_get(mp,x,0);
 
         // construct the actual node of the page
+#ifdef NODE_DEBUG
         err_debug(("~~^\nrebuild node"));
+#endif
         PAGE_INIT(t,h);
         __rebuild_node(h,&logCollector);
+#ifdef NODE_DEBUG
         err_debug(("~~$"));
+#endif
         __log_free(&logCollector);
         return h;
     }
@@ -271,4 +281,5 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
 	index = base ? base - 1 : base;
     return index;
 }
+
 
