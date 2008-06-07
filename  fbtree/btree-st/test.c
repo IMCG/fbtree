@@ -57,8 +57,8 @@ void testBT(){
 		err_quit("can't open file %s\n", config.BTdatfile);
 	}
 	
-    NTT_dump();
-    for( i = 0 ; i<833; i++){
+    //NTT_dump();
+    for( i = 0 ; i<4000; i++){
         fprintf(stderr,"----\ni=%d\n",i);
         k = (u_int32_t)i;
         d = (u_int32_t)i*i;
@@ -70,11 +70,10 @@ void testBT(){
         if(rc!=RET_SUCCESS){
             err_quit("db put error");
         }
-        NTT_dump();
-        //__bt_dump(dbp);
+        //NTT_dump();
         
         rk=i/2+1;
-        rk=428;
+        //rk=428;
         rkey.size=4;
         rkey.data=(void*)&rk;
         rdata.size=0;
