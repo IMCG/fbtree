@@ -26,7 +26,7 @@ static EPG *bt_fast __P((BTREE *, const DBT *, const DBT *, int *));
 int
 __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 {
-    const char* err_loc = "function (__bt_put_st) in 'bt_put_st.c'";
+    const char* err_loc = "(__bt_put_st) in 'bt_put_st.c'";
 	BTREE *t;
 	DBT tkey, tdata;
 	EPG *e;
@@ -199,8 +199,7 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 		goto success;
 	}
     /* == Case 2. directly insert if enough room == 
-     * FIXME
-     * leaf is always in disk mode here
+     * FIXME leaf is always in disk mode here
      */
 #ifdef BT_PUT_DEBUG
     err_debug(("leaf room is enough, insert"));
@@ -315,7 +314,6 @@ bt_fast(t, key, data, exactp)
 #ifdef STATISTICS
 	++bt_cache_hit;
 #endif
-    //TODO-DEBUG
     err_debug(("HIT cache: %s", err_loc));
 	return (&t->bt_cur);
 

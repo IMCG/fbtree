@@ -15,7 +15,7 @@ int NTT_init(){
     int i;
     for(i=1; i<NTT_MAXSIZE; i++){
         NTT[i].flags = NODE_INVALID;
-        NTT[i].logVersion = -1;
+        NTT[i].logVersion = 0;
     }
 }
 /**
@@ -74,8 +74,8 @@ void NTT_add(PAGE* pg){
     else{
         err_quit("unknown flags: %s",err_loc);
     }
-    entry->logVersion = -1;
-    entry->maxSeq= -1;
+    entry->logVersion = 0;
+    entry->maxSeq= 0;
     INIT_LIST_HEAD(&(NTT[pgno].list.list));
 
 }
@@ -98,7 +98,7 @@ void NTT_add_pgno(pgno_t nodeID, pgno_t pgno){
      * XXX It will be too slow if we check it every time. 
      */
     list_for_each_entry(nslist,&slist->list,list){
-        if(nslist->pgno==pgno); return;
+        if(nslist->pgno==pgno) return;
     }
     err_debug(("Add pgno %ud to the sector list of NTT[%ud]",pgno,nodeID));
 

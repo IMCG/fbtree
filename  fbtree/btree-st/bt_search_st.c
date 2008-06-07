@@ -40,11 +40,14 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 	int cmp;
 
 	BT_CLR(t);  /* @mx it initializes t->bt_sp  */
+    err_debug1("Searh Btree");
 	for (pg = P_ROOT;;) {
-        err_debug1("~^");
-        err_debug(("read Node %ud",pg));
+        err_debug0("~^");
+        err_debug(("Read Node %ud",pg));
         h = read_node(t,pg);
-        err_debug1("~$");
+        __bt_dpage(h);
+        err_debug0("~$");
+        err_debug1("End Read");
         if(h==NULL)
 			return (NULL);
         /* ??? not so clear about the binary search */
@@ -55,6 +58,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 			if ((cmp = __bt_cmp(t, key, &t->bt_cur)) == 0) {
 				if (h->flags & P_BLEAF) {
 					*exactp = 1;
+                    err_debug1("End Search\n");
 					return (&t->bt_cur);
 				}
 				goto next;
@@ -78,14 +82,17 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 				if (base == 0 &&
 				    h->prevpg != P_INVALID &&
 				    __bt_sprev(t, h, key, exactp))
+                    err_debug1("End Search\n");
 					return (&t->bt_cur);
 				if (base == NEXTINDEX(h) &&
 				    h->nextpg != P_INVALID &&
 				    __bt_snext(t, h, key, exactp))
+                    err_debug1("End Search\n");
 					return (&t->bt_cur);
 			}
 			*exactp = 0;
 			t->bt_cur.index = base;
+            err_debug1("End Search\n");
 			return (&t->bt_cur);
 		}
 
@@ -99,7 +106,8 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 		index = base ? base - 1 : base;
 
 next:		BT_PUSH(t, h->pgno, index);
-		pg = GETBINTERNAL(h, index)->pgno;
+        pg = GETBINTERNAL(h, index)->pgno;
+		err_debug(("--- index = %u, pg = %u ", index,pg)); 
 		mpool_put(t->bt_mp, h, 0);
 	}
 }

@@ -181,7 +181,7 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	dbp->type = DB_BTREE;
 	dbp->internal = t;
 	dbp->close = __bt_close;
-    /* TODO del,fd,seq,syn not implenmented yet */
+    /* XXX del,fd,seq,syn not implenmented yet */
 #if 0
 	dbp->del = __bt_delete;
 	dbp->fd = __bt_fd;
@@ -323,7 +323,7 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 		mpool_filter(t->bt_mp, __bt_pgin, __bt_pgout, t);
     
     /* Initialize the log buffer pool */
-    /* TODO ??? log buffer is a dependable buffer or contorled by bt_mp, it's a problem */
+    /* ??? log buffer is a dependable buffer or contorled by bt_mp, it's a problem */
 #if 0
 	if ((t->bt_logmp =
 	    mpool_open(NULL, t->bt_fd, t->bt_psize, ncache)) == NULL)
