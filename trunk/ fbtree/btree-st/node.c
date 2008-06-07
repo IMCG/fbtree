@@ -67,7 +67,6 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
 
         }
     }
-
     return h;
 }
 
@@ -175,7 +174,7 @@ void addkey2node_log(PAGE* h ,BINTERNAL_LOG* bi_log){
 
     assert(bi!=NULL);
     skip = search_node(h, bi_log->ksize, bi_log->bytes);
-    addkey2node(h,bi,skip);
+    addkey2node(h,bi,skip); 
     free(bi);
 }
 
@@ -196,9 +195,10 @@ void addkey2node( PAGE* h, BINTERNAL* bi, indx_t skip){
     assert(bi!=NULL);
     nbytes = NBINTERNAL(bi->ksize) ;
     /* move to make room for the new (key,pointer) pair */
-    if (skip < (nxtindex = NEXTINDEX(h)))
+    if (skip < (nxtindex = NEXTINDEX(h))){
             memmove(h->linp + skip + 1, h->linp + skip,
                 (nxtindex - skip) * sizeof(indx_t));
+    }
     /* insert key into the skip */
     h->lower += sizeof(indx_t);
     h->linp[skip] = h->upper -= nbytes;
@@ -241,44 +241,43 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
     BINTERNAL* bi;
     int cmp; /* result of compare */
 
-    const char err_loc[] = "function (search_node) in 'node.c'";
+    const char err_loc[] = "(search_node) in 'node.c'";
 
     if(h->flags & P_BLEAF){
         err_quit("not support leaf search yet: %s", err_loc);
     }
 
     k1.size=ksize;
-    k1.data=(void*)bytes;
-
-
+    k1.data=(char*)bytes;
     /* Do a binary search on the current page. */
     for (base = 0, lim = NEXTINDEX(h); lim; lim >>= 1) {
         index = base + (lim >> 1);
         /* FIXME: WORKED here? the behavior is different from __bt_cmp in bt_util.c  */
-#if 0
-	    if (index == 0 && h->prevpg == P_INVALID && !(h->flags & P_BLEAF)){
-		    cmp = 1;
-        }
-#endif
-        bi=GETBINTERNAL(h,index);
-		if (bi->flags & P_BIGKEY){
-            err_quit("not deal with big key yet: %s",err_loc);
-        }
-		else {
-			k2.data = bi->bytes;
-			k2.size = bi->ksize;
-		}
+	    //if (index == 0 && h->prevpg == P_INVALID && !(h->flags & P_BLEAF)){
+		//    cmp = 1;
+        //}
+        //else{
+            bi=GETBINTERNAL(h,index);
+            if (bi->flags & P_BIGKEY){
+                err_quit("not deal with big key yet: %s",err_loc);
+            }
+            else {
+                k2.data = bi->bytes;
+                k2.size = bi->ksize;
+            }
 
-        if ((cmp = __bt_defcmp(&k1,&k2)) == 0) {
-            return index;
-        }
+            if ((cmp = __bt_defcmp(&k1,&k2)) == 0) {
+                return index;
+            }
+        //}
         if (cmp > 0) {
             base = index + 1;
             --lim;
         }
 	}
-
-	index = base ? base - 1 : base;
+	//index = base ? base - 1 : base;
+    //NOTE It should be base here
+    index=base;
     return index;
 }
 

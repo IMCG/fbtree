@@ -45,7 +45,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
         err_debug0("~^");
         err_debug(("Read Node %ud",pg));
         h = read_node(t,pg);
-        __bt_dpage(h);
+        //__bt_dpage(h);
         err_debug0("~$");
         err_debug1("End Read");
         if(h==NULL)

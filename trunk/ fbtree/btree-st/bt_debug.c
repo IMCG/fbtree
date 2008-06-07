@@ -188,24 +188,21 @@ __bt_dpage(h)
 	top = NEXTINDEX(h);
 	(void)fprintf(stderr, " lower %3d upper %3d nextind %d\n",
 	    h->lower, h->upper, top);
+    //XXX we suppose key/data is u_int32_t
 	for (cur = 0; cur < top; cur++) {
 		(void)fprintf(stderr, "\t[%03d] %4d ", cur, h->linp[cur]);
 		switch (h->flags & P_TYPE) {
 		case P_BINTERNAL:
 			bi = GETBINTERNAL(h, cur);
 			(void)fprintf(stderr,
-			    "size %03d pgno %03d", bi->ksize, bi->pgno);
+			    "size %03d pgno %03d ", bi->ksize, bi->pgno);
 			if (bi->flags & P_BIGKEY)
 				(void)fprintf(stderr, " (indirect)");
 			else if (bi->ksize)
 				(void)fprintf(stderr,
-				    " {%.*s}", (int)bi->ksize, bi->bytes);
+				    "%d", *(int*)bi->bytes);
 			break;
-		case P_RINTERNAL:
-			ri = GETRINTERNAL(h, cur);
-			(void)fprintf(stderr, "entries %03d pgno %03d",
-				ri->nrecs, ri->pgno);
-			break;
+
 		case P_BLEAF:
 			bl = GETBLEAF(h, cur);
 			if (bl->flags & P_BIGKEY)
@@ -214,7 +211,7 @@ __bt_dpage(h)
 				    *(pgno_t *)bl->bytes,
 				    *(u_int32_t *)(bl->bytes + sizeof(pgno_t)));
 			else if (bl->ksize)
-				(void)fprintf(stderr, "%s/", bl->bytes);
+				(void)fprintf(stderr, "%d/", *(int*)bl->bytes);
 			if (bl->flags & P_BIGDATA)
 				(void)fprintf(stderr,
 				    "big data page %lu size %u",
@@ -222,19 +219,8 @@ __bt_dpage(h)
 				    *(u_int32_t *)(bl->bytes + bl->ksize +
 				    sizeof(pgno_t)));
 			else if (bl->dsize)
-				(void)fprintf(stderr, "%.*s",
-				    (int)bl->dsize, bl->bytes + bl->ksize);
-			break;
-		case P_RLEAF:
-			rl = GETRLEAF(h, cur);
-			if (rl->flags & P_BIGDATA)
-				(void)fprintf(stderr,
-				    "big data page %lu size %u",
-				    *(pgno_t *)rl->bytes,
-				    *(u_int32_t *)(rl->bytes + sizeof(pgno_t)));
-			else if (rl->dsize)
-				(void)fprintf(stderr,
-				    "%.*s", (int)rl->dsize, rl->bytes);
+				(void)fprintf(stderr, "%d",
+				    *(int*)(bl->bytes + bl->ksize));
 			break;
 		}
 		(void)fprintf(stderr, "\n");

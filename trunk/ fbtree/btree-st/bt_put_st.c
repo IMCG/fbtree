@@ -145,7 +145,7 @@ tkey.data = kb;
 	h = e->page;
 	index = e->index;
 #ifdef BT_PUT_DEBUG
-    err_debug(("find index s.t. K(index) =< key < K(index+1) "));
+    err_debug(("index=%u :find index s.t. K(index) =< key < K(index+1) ",index));
 #endif
 	/* ----
      * = Step 2. Insert key/data into the tree =
