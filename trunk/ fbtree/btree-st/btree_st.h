@@ -83,7 +83,6 @@ typedef struct _binternal_log{
     strncpy((char*)p, binternal->bytes, binternal->ksize);  \
 }
 
-void wr_binternal_log(BINTERNAL_LOG* dest,BINTERNAL_LOG* src);
 void log_dump(BINTERNAL_LOG* log);
 void append_log_bi(PAGE* p , BINTERNAL_LOG* bi_log);
 BINTERNAL_LOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);

@@ -60,74 +60,6 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 
 	assert (!(key->size + data->size > t->bt_ovflsize));
 	assert (!(flags == R_CURSOR));
-    /* XXX deal with big data/key and R_CURSOR */
-#if 0
-//{{{
-	switch (flags) {
-	case 0:
-	case R_NOOVERWRITE:
-		break;
-	case R_CURSOR:
-		/*
-		 * If flags is R_CURSOR, put the cursor.  Must already
-		 * have started a scan and not have already deleted it.
-		 */
-		if (F_ISSET(&t->bt_cursor, CURS_INIT) &&
-		    !F_ISSET(&t->bt_cursor,
-		        CURS_ACQUIRE | CURS_AFTER | CURS_BEFORE))
-			break;
-		/* FALLTHROUGH */
-	default:
-		errno = EINVAL;
-		return (RET_ERROR);
-	}
-
-
-	/*
-	 * If the key/data pair won't fit on a page, store it on overflow
-	 * pages.  Only put the key on the overflow page if the pair are
-	 * still too big after moving the data to an overflow page.
-	 *
-	 * XXX
-	 * If the insert fails later on, the overflow pages aren't recovered.
-	 */
-	dflags = 0; /* @mx data flag to indicate BIGKEY or BIGDATA */
-	if (key->size + data->size > t->bt_ovflsize) {
-		if (key->size > t->bt_ovflsize) {
-storekey:		if (__ovfl_put(t, key, &pg) == RET_ERROR)
-				return (RET_ERROR);
-tkey.data = kb;
-			tkey.size = NOVFLSIZE;
-			memmove(kb, &pg, sizeof(pgno_t));
-			memmove(kb + sizeof(pgno_t),
-			    &key->size, sizeof(u_int32_t));
-			dflags |= P_BIGKEY;
-			key = &tkey;
-		}
-		if (key->size + data->size > t->bt_ovflsize) {
-			if (__ovfl_put(t, data, &pg) == RET_ERROR)
-				return (RET_ERROR);
-			tdata.data = db;
-			tdata.size = NOVFLSIZE;
-			memmove(db, &pg, sizeof(pgno_t));
-			memmove(db + sizeof(pgno_t),
-			    &data->size, sizeof(u_int32_t));
-			dflags |= P_BIGDATA;
-			data = &tdata;
-		}
-		if (key->size + data->size > t->bt_ovflsize)
-			goto storekey;
-	}
-
-	/* Replace the cursor. */
-	if (flags == R_CURSOR) {
-		if ((h = mpool_get(t->bt_mp, t->bt_cursor.pg.pgno, 0)) == NULL)
-			return (RET_ERROR);
-		index = t->bt_cursor.pg.index;
-		goto delete;
-	}
-//}}}
-#endif
 
 	/* ----
      * = Step 1. find Key(index) =< key < Key(index+1) =
@@ -212,17 +144,6 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 	h->linp[index] = h->upper -= nbytes;
 	dest = (char *)h + h->upper;
 	WR_BLEAF(dest, key, data, dflags);
-
-#if 0
-//{{{
-    /* @mx XXX cursor is not used currently */
-	/* If the cursor is on this page, adjust it as necessary. */
-	if (F_ISSET(&t->bt_cursor, CURS_INIT) &&
-	    !F_ISSET(&t->bt_cursor, CURS_ACQUIRE) &&
-	    t->bt_cursor.pg.pgno == h->pgno && t->bt_cursor.pg.index >= index)
-		++t->bt_cursor.pg.index;
-//}}}
-#endif
     
     // ??? not so clear about it
 	if (t->bt_order == NOT)
@@ -243,11 +164,6 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 	mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 
 success:
-#if 0
-	if (flags == R_SETCURSOR)
-		__bt_setcur(t, e->page->pgno, e->index);
-#endif
-
 	F_SET(t, B_MODIFIED);
 	return (RET_SUCCESS);
 }

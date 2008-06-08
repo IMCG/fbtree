@@ -139,8 +139,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 
 	/* If the root page was split, make it look right. */
 	if (sp->pgno == P_ROOT &&
-	    (F_ISSET(t, R_RECNO) ?
-	    bt_rroot(t, sp, l, r) : bt_broot(t, sp, l, r)) == RET_ERROR)
+	    bt_broot(t, sp, l, r) == RET_ERROR)
 		goto err2;
 
     if(sp->pgno == P_ROOT){
@@ -365,8 +364,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 
 		/* If the root page was split, make it look right. */
 		if (sp->pgno == P_ROOT &&
-		    (F_ISSET(t, R_RECNO) ?
-		    bt_rroot(t, sp, l, r) : bt_broot(t, sp, l, r)) == RET_ERROR)
+		    bt_broot(t, sp, l, r) == RET_ERROR)
 			goto err1;
 
         if(mode & NODE_LOG){
@@ -585,48 +583,6 @@ bt_root(t, h, lp, rp, skip, ilen)
 	return (tp);
 }
 
-/*
- * BT_RROOT -- Fix up the recno root page after it has been split.
- *
- * Parameters:
- *	t:	tree
- *	h:	root page
- *	l:	left page
- *	r:	right page
- *
- * Returns:
- *	RET_ERROR, RET_SUCCESS
- */
-static int
-bt_rroot(t, h, l, r)
-	BTREE *t;
-	PAGE *h, *l, *r;
-{
-#if 0
-    //{{{
-	char *dest;
-
-	/* Insert the left and right keys, set the header information. */
-	h->linp[0] = h->upper = t->bt_psize - NRINTERNAL;
-	dest = (char *)h + h->upper;
-	WR_RINTERNAL(dest,
-	    l->flags & P_RLEAF ? NEXTINDEX(l) : rec_total(l), l->pgno);
-
-	h->linp[1] = h->upper -= NRINTERNAL;
-	dest = (char *)h + h->upper;
-	WR_RINTERNAL(dest,
-	    r->flags & P_RLEAF ? NEXTINDEX(r) : rec_total(r), r->pgno);
-
-	h->lower = BTDATAOFF + 2 * sizeof(indx_t);
-
-	/* Unpin the root page, set to recno internal page. */
-	h->flags &= ~P_TYPE;
-	h->flags |= P_RINTERNAL;
-	mpool_put(t->bt_mp, h, MPOOL_DIRTY);
-    //}}}
-#endif
-	return (RET_SUCCESS);
-}
 
 /*
  * BT_BROOT -- Fix up the btree root page after it has been split.
