@@ -109,7 +109,7 @@ typedef struct _page {
 	h->upper  = t->bt_psize; \
 	h->nextpg = NULL; \
 	h->prevpg = NULL; \
-    h->flags =P_BINTERNAL;
+    h->flags = P_BINTERNAL;
 
 
 /*

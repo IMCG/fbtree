@@ -6,25 +6,25 @@ static void mpool_sync_page(MPOOL* mp, pgno_t pg);
  * ----
  */
 /**
- * append_log_bi - Append a BLOG 'bi_log' to the PAGE p
+ * append_log_bi - Append a BLOG 'blog' to the PAGE p
  * @p: page header of the dest page
- * @bi_log: internal log entry to insert
+ * @blog: internal log entry to insert
  *
  * It computes the dest to append and then use WR_BLOG to copy the log entry to the PAGE
  */
-void append_log_bi(PAGE* p , BLOG* bi_log){
+void append_log(PAGE* p , BLOG* blog){
     indx_t index;
     char* dest;
     u_int32_t nbytes;
 
     assert(p!=NULL);
 
-    nbytes = NBLOG(bi_log->ksize);
+    nbytes = NBLOG(blog);
     index = NEXTINDEX(p);
     p->lower += sizeof(indx_t);
     p->linp[index] = p->upper-=nbytes;
     dest = (char*)p + p->upper;
-    WR_BLOG(dest, bi_log);
+    WR_BLOG(dest, blog);
 
 }
 /**
@@ -39,34 +39,72 @@ void append_log_bi(PAGE* p , BLOG* bi_log){
  * TODO we only deal with ADD_KEY here
  */
 BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
-    BLOG* bi_log = (BLOG*)malloc(NBLOG_FROM_DISK(bi) );
-    bi_log->ksize = bi->ksize;
-    bi_log->u_pgno = bi->pgno;
-    bi_log->nodeID = nodeID;
-    bi_log->seqnum = seqnum;
-    bi_log->logVersion = logVersion;
-    bi_log->flags = ADD_KEY;
-    memcpy(bi_log->bytes,bi->bytes,bi->ksize);
-    return bi_log;
+    BLOG* blog = (BLOG*)malloc(NBINTERNAL_LOG_FROM_DISK(bi) );
+    blog->ksize = bi->ksize;
+    blog->u_pgno = bi->pgno;
+    blog->nodeID = nodeID;
+    blog->seqnum = seqnum;
+    blog->logVersion = logVersion;
+    blog->flags = ADD_KEY | LOG_INTERNAL;
+    memcpy(blog->bytes,bi->bytes,bi->ksize);
+    return blog;
 }
+/**
+ * disk2log - convert a btree leaf entry of disk mode into log mode
+ *
+ * @bi: bleaf entry with disk mode
+ * @seqnum: sequence number of the new log entry
+ * @logVersion: version of the new log entry
+ *
+ * @return: bleaf entry with log mode
+ *
+ * TODO we only deal with ADD_KEY here
+ */
+BLOG* disk2log_bl(BLEAF* bl, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
+    BLOG* blog = (BLOG*)malloc(NBLEAF_LOG_FROM_DISK(bl) );
+    blog->ksize = bl->ksize;
+    blog->u_dsize = bl->dsize;
+    blog->nodeID = nodeID;
+    blog->seqnum = seqnum;
+    blog->logVersion = logVersion;
+    blog->flags = ADD_KEY | LOG_LEAF;
+    memcpy(blog->bytes,bl->bytes,bl->ksize+bl->dsize);
+    return blog;
+}
+
 
 /**
  * disk2log - convert a btree internal's entry of disk mode into log mode
  *
- * @bi_log: binternal entry with log mode
+ * @blog: binternal entry with log mode
  *
  * @return: new binternal entry with disk mode
  *
  * TODO we only deal with ADD_KEY here
  */
-BINTERNAL* log2disk_bi( BLOG* bi_log){
+void* log2disk( BLOG* blog){
+    void* b_entry;
+    BINTERNAL* bi;
+    BLEAF* bl;
+    
+    b_entry = malloc(NB_DISK_FROM_LOG(blog));
 
-    BINTERNAL* bi = (BINTERNAL*)malloc(NBINTERNAL_DISK_FROM_LOG(bi_log) );
-    bi->ksize = bi_log->ksize;
-    bi->pgno = bi_log->u_pgno;
-    bi->flags = ADD_KEY;
-    memcpy(bi->bytes,bi_log->bytes,bi_log->ksize);
-    return bi;
+    if(blog->flags & LOG_INTERNAL){
+        bi = (BINTERNAL*)b_entry;
+        bi->ksize = blog->ksize;
+        bi->pgno = blog->u_pgno;
+        bi->flags = 0;
+        memcpy(bi->bytes,blog->bytes,blog->ksize);
+    }else{
+        assert(blog->flags & LOG_LEAF);
+        bl = (BLEAF*)b_entry;
+        bl->ksize = blog->ksize;
+        bl->dsize = blog->u_dsize;
+        bl->flags = 0;
+        memcpy(bl->bytes, blog->bytes, blog->ksize + blog->u_dsize);
+    }
+
+    return b_entry;
 }
 /**
  * log_dump - dump the log entry.
@@ -101,19 +139,19 @@ void logpool_init(BTREE* t){
 /**
  * logpool_put - put the log entry into the log buffer
  * @mp: buffer pool
- * @bi_log: log entry
+ * @blog: log entry
  *
  * @return: pgno of the entry
  * XXX we only deal with BLOG currently
  */
-pgno_t logpool_put(BTREE* t ,BLOG* bi_log){
+pgno_t logpool_put(BTREE* t ,BLOG* blog){
     const char* err_loc = "(logpool_put) in 'log.c'";
     u_int32_t nbytes;
     indx_t index;
 
-    assert(bi_log->nodeID != bi_log->u_pgno);
+    assert(blog->nodeID != blog->u_pgno);
 
-    nbytes = NBLOG(bi_log->ksize);
+    nbytes = NBLOG(blog);
     // first call
     if (logbuf == NULL){
         err_debug(("open a new log buffer pool"));
@@ -145,10 +183,10 @@ pgno_t logpool_put(BTREE* t ,BLOG* bi_log){
 
     }
 
-    append_log_bi(logbuf, bi_log);
-    NTT_add_pgno(bi_log->nodeID,pgno_logbuf);
+    append_log(logbuf, blog);
+    NTT_add_pgno(blog->nodeID,pgno_logbuf);
     err_debug0("append log: ");
-    log_dump(bi_log);
+    log_dump(blog);
 #ifdef LOG_DEBUG
     err_debug(("After put a log into the log buffer pool: size = %ud, left = %ud", nbytes + sizeof(indx_t),logbuf->upper-logbuf->lower));
 #endif
@@ -164,7 +202,7 @@ pgno_t logpool_put(BTREE* t ,BLOG* bi_log){
 void genLogFromNode(BTREE* t, PAGE* pg){
     unsigned int i;
     BINTERNAL* bi;
-    BLOG* bi_log;
+    BLOG* blog;
     NTTEntry* e;
     pgno_t pgno,npgno;
     pgno = P_INVALID;
@@ -178,10 +216,10 @@ void genLogFromNode(BTREE* t, PAGE* pg){
         bi = GETBINTERNAL(pg,i);
         assert(bi!=NULL);
 
-        bi_log = disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
+        blog = disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
 
         /* TODO XXX ensure atomic operation we should compute the size first */
-        npgno = logpool_put(t,bi_log);
+        npgno = logpool_put(t,blog);
         e->maxSeq++;
         //XXX e is refecthed in NTT_add_pgno
         if(npgno!=pgno){
