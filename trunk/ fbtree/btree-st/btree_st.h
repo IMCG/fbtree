@@ -63,9 +63,8 @@ typedef struct _BLOG{
 
 /* Get the number of bytes in the entry. */
 #define NBLOG(blog)							\
-	LALIGN(sizeof(u_int32_t) + 2*sizeof(pgno_t) + 2*sizeof(u_int32_t) + sizeof(u_char) + (blog->ksize))
-
-/* Get the number of bytes in the log mode entry by the disk mode entry 'bi' */
+	LALIGN( sizeof(u_int32_t) + 2*sizeof(pgno_t) + 2*sizeof(u_int32_t) + sizeof(u_char) + blog->ksize \
+        + ((blog->flags & LOG_LEAF) ? (blog->u_dsize) : 0))/* Get the number of bytes in the log mode entry by the disk mode entry 'bi' */
 #define NBINTERNAL_LOG_FROM_DISK(bi)    \
     LALIGN( NBINTERNAL(bi->ksize) +  sizeof(pgno_t) + 2*sizeof(u_int32_t))
 
@@ -85,7 +84,7 @@ typedef struct _BLOG{
     p += sizeof(u_int32_t);						\
 	*(pgno_t *)p = binternal->nodeID;			\
 	p += sizeof(pgno_t);					\
-	*(pgno_t *)p = binternal->u_pgno;			\
+	*(pgno_t *)p = (binternal->flags & LOG_INTERNAL) ? binternal->u_pgno : binternal->u_dsize ;   \
 	p += sizeof(pgno_t);						\
 	*(pgno_t *)p = binternal->seqnum;			\
 	p += sizeof(u_int32_t);						\
@@ -93,7 +92,7 @@ typedef struct _BLOG{
 	p += sizeof(u_int32_t);						\
 	*(u_char *)p = binternal->flags;						\
 	p += sizeof(u_char);						\
-    strncpy((char*)p, binternal->bytes, binternal->ksize);  \
+    strncpy((char*)p, binternal->bytes, binternal->ksize + ((binternal->flags & LOG_INTERNAL) ? 0 : binternal->u_dsize) );    \
 }
 
 void log_dump(BLOG* log);
