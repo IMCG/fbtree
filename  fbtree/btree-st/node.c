@@ -3,7 +3,7 @@
  * log list to collect entries of a node
  */
 typedef struct _loglist{
-    BINTERNAL_LOG* log;
+    BLOG* log;
     struct list_head list;
 }LogList;
 
@@ -14,12 +14,12 @@ typedef struct _loglist{
  *
  * XXX you should make a decision here, clone bi_log or keep page in memory
  */
-static void __log_collect( LogList* logCollector, BINTERNAL_LOG* bi_log){
+static void __log_collect( LogList* logCollector, BLOG* bi_log){
     const char* err_loc ="(log_collect) in 'log.c'";
     LogList* tmp = (LogList*)malloc(sizeof(LogList));
-    BINTERNAL_LOG * bi = (BINTERNAL_LOG*)malloc(NBINTERNAL_LOG(bi_log->ksize));
+    BLOG * bi = (BLOG*)malloc(NBLOG(bi_log->ksize));
     char* dest = (char*)bi;
-    WR_BINTERNAL_LOG(dest,bi_log);
+    WR_BLOG(dest,bi_log);
     tmp->log = bi;
     list_add(&(tmp->list),&(logCollector->list));
 }
@@ -39,7 +39,7 @@ static void __log_free( LogList* logCollector){
 static PAGE* __rebuild_node(PAGE* h, LogList* list){
     pgno_t npg;
     LogList* entry;
-    BINTERNAL_LOG* log;
+    BLOG* log;
     const char* err_loc = "(__rebuild_node) in 'node.c'";
 
 #ifdef NODE_DEBUG
@@ -84,7 +84,7 @@ PAGE* read_node(BTREE*t , pgno_t x){
     const char* err_loc = "(read_node)";
     PAGE *h;
     pgno_t pg;
-    BINTERNAL_LOG * bi_log;
+    BLOG * bi_log;
     LogList logCollector;
     int i;
 
@@ -123,7 +123,7 @@ PAGE* read_node(BTREE*t , pgno_t x){
             // iterate the page to collect entry in this page
             for(i =0 ; i<NEXTINDEX(h) ; i++){
                 // get the log entry
-                bi_log = GETBINTERNAL_LOG(h,i);
+                bi_log = GETBLOG(h,i);
                 // if it belongs to the node x , collect it
                 if( bi_log->nodeID==x && bi_log->logVersion==entry->logVersion){
                     __log_collect(&logCollector,bi_log);
@@ -164,7 +164,7 @@ PAGE* read_node(BTREE*t , pgno_t x){
  * XXX We first construct a binternal entry from the log entry, it's not essential.
  * We should apply the log directly for efficiency.
  */
-void addkey2node_log(PAGE* h ,BINTERNAL_LOG* bi_log){
+void addkey2node_log(PAGE* h ,BLOG* bi_log){
 
     BINTERNAL* bi;
     indx_t skip;

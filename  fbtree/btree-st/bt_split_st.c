@@ -83,7 +83,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 {
     const char* err_loc = "function (__bt_split_st) in 'bt_split_st.c'";
 	BINTERNAL *bi;
-	BINTERNAL_LOG *bi_log;
+	BLOG *bi_log;
 	BLEAF *bl, *tbl;
 	DBT a, b;
 	EPGNO *parent;

@@ -6,25 +6,25 @@ static void mpool_sync_page(MPOOL* mp, pgno_t pg);
  * ----
  */
 /**
- * append_log_bi - Append a BINTERNAL_LOG 'bi_log' to the PAGE p
+ * append_log_bi - Append a BLOG 'bi_log' to the PAGE p
  * @p: page header of the dest page
  * @bi_log: internal log entry to insert
  *
- * It computes the dest to append and then use WR_BINTERNAL_LOG to copy the log entry to the PAGE
+ * It computes the dest to append and then use WR_BLOG to copy the log entry to the PAGE
  */
-void append_log_bi(PAGE* p , BINTERNAL_LOG* bi_log){
+void append_log_bi(PAGE* p , BLOG* bi_log){
     indx_t index;
     char* dest;
     u_int32_t nbytes;
 
     assert(p!=NULL);
 
-    nbytes = NBINTERNAL_LOG(bi_log->ksize);
+    nbytes = NBLOG(bi_log->ksize);
     index = NEXTINDEX(p);
     p->lower += sizeof(indx_t);
     p->linp[index] = p->upper-=nbytes;
     dest = (char*)p + p->upper;
-    WR_BINTERNAL_LOG(dest, bi_log);
+    WR_BLOG(dest, bi_log);
 
 }
 /**
@@ -38,8 +38,8 @@ void append_log_bi(PAGE* p , BINTERNAL_LOG* bi_log){
  *
  * TODO we only deal with ADD_KEY here
  */
-BINTERNAL_LOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
-    BINTERNAL_LOG* bi_log = (BINTERNAL_LOG*)malloc(NBINTERNAL_LOG_FROM_DISK(bi) );
+BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
+    BLOG* bi_log = (BLOG*)malloc(NBLOG_FROM_DISK(bi) );
     bi_log->ksize = bi->ksize;
     bi_log->u_pgno = bi->pgno;
     bi_log->nodeID = nodeID;
@@ -59,7 +59,7 @@ BINTERNAL_LOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int
  *
  * TODO we only deal with ADD_KEY here
  */
-BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log){
+BINTERNAL* log2disk_bi( BLOG* bi_log){
 
     BINTERNAL* bi = (BINTERNAL*)malloc(NBINTERNAL_DISK_FROM_LOG(bi_log) );
     bi->ksize = bi_log->ksize;
@@ -72,7 +72,7 @@ BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log){
  * log_dump - dump the log entry.
  * BINTERNAL currently.
  */
-void log_dump(BINTERNAL_LOG* bi){
+void log_dump(BLOG* bi){
     err_debug(("[ ksize=%ud, nodeID=%ud, pgno=%ud, seqnum=%ud, logVersion=%ud ]",
                 bi->ksize, bi->nodeID, bi->u_pgno, bi->seqnum, bi->logVersion));
 
@@ -104,16 +104,16 @@ void logpool_init(BTREE* t){
  * @bi_log: log entry
  *
  * @return: pgno of the entry
- * XXX we only deal with BINTERNAL_LOG currently
+ * XXX we only deal with BLOG currently
  */
-pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
+pgno_t logpool_put(BTREE* t ,BLOG* bi_log){
     const char* err_loc = "(logpool_put) in 'log.c'";
     u_int32_t nbytes;
     indx_t index;
 
     assert(bi_log->nodeID != bi_log->u_pgno);
 
-    nbytes = NBINTERNAL_LOG(bi_log->ksize);
+    nbytes = NBLOG(bi_log->ksize);
     // first call
     if (logbuf == NULL){
         err_debug(("open a new log buffer pool"));
@@ -164,7 +164,7 @@ pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
 void genLogFromNode(BTREE* t, PAGE* pg){
     unsigned int i;
     BINTERNAL* bi;
-    BINTERNAL_LOG* bi_log;
+    BLOG* bi_log;
     NTTEntry* e;
     pgno_t pgno,npgno;
     pgno = P_INVALID;

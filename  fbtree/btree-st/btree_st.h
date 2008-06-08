@@ -35,7 +35,7 @@ void NTT_dump();
  * = Section 2. Log Entry =
  * ----
  */
-typedef struct _binternal_log{
+typedef struct _BLOG{
 	u_int32_t ksize;		/* size of  key */
 	pgno_t	nodeID;			/* pageno of log entry's owner */
 
@@ -56,26 +56,26 @@ typedef struct _binternal_log{
 #define LOG_LEAF        0x40        /* log entry for update pointer */
 	u_char	flags;
 	char	bytes[1];		/* data */
-}BINTERNAL_LOG;
-/* Get the page's BINTERNAL_LOG structure at index indx. */
-#define	GETBINTERNAL_LOG(pg, indx)						\
-	((BINTERNAL_LOG *)((char *)(pg) + (pg)->linp[indx]))
+}BLOG;  /* wonderful name, isn't it? */
+/* Get the page's BLOG structure at index indx. */
+#define	GETBLOG(pg, indx)						\
+	((BLOG *)((char *)(pg) + (pg)->linp[indx]))
 
 /* Get the number of bytes in the entry. */
-#define NBINTERNAL_LOG(len)							\
+#define NBLOG(len)							\
 	LALIGN(sizeof(u_int32_t) + 2*sizeof(pgno_t) + 2*sizeof(u_int32_t) + sizeof(u_char) + (len))
 
 /* Get the number of bytes in the log mode entry by the disk mode entry 'bi' */
-#define NBINTERNAL_LOG_FROM_DISK(bi)    \
+#define NBLOG_FROM_DISK(bi)    \
     LALIGN( NBINTERNAL(bi->ksize) +  sizeof(pgno_t) + 2*sizeof(u_int32_t))
 /* Get the number of bytes in the disk mode entry by the log mode entry 'bi' */
 #define NBINTERNAL_DISK_FROM_LOG(bi_log)    \
-    LALIGN( NBINTERNAL_LOG(bi_log->ksize) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
+    LALIGN( NBLOG(bi_log->ksize) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
 
-/* Copy a BINTERNAL_LOG entry to the page.
- * Note: p should be the destination to insert. It can also used to copy a binternal_log to another binternal_log (i.e. p=binternal_log)
+/* Copy a BLOG entry to the page.
+ * Note: p should be the destination to insert. It can also used to copy a BLOG to another BLOG (i.e. p=BLOG)
  */
-#define	WR_BINTERNAL_LOG(p, binternal) {				\
+#define	WR_BLOG(p, binternal) {				\
 	*(u_int32_t *)p = binternal->ksize;			\
     p += sizeof(u_int32_t);						\
 	*(pgno_t *)p = binternal->nodeID;			\
@@ -91,17 +91,19 @@ typedef struct _binternal_log{
     strncpy((char*)p, binternal->bytes, binternal->ksize);  \
 }
 
-void log_dump(BINTERNAL_LOG* log);
-void append_log_bi(PAGE* p , BINTERNAL_LOG* bi_log);
-BINTERNAL_LOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
-BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log);
+void log_dump(BLOG* log);
+void append_log_bi(PAGE* p , BLOG* bi_log);
+BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
+BINTERNAL* log2disk_bi( BLOG* bi_log);
 /* ----
  * = Section 3. Log Buffer =
  * ----
  */
 
 void logpool_init(BTREE* t);
-pgno_t logpool_put(BTREE* t,BINTERNAL_LOG* bi_log);
+pgno_t logpool_put(BTREE* t,BLOG* bi_log);
+
+
 
 /* ----
  * = Section 4. Node operation =
@@ -109,7 +111,7 @@ pgno_t logpool_put(BTREE* t,BINTERNAL_LOG* bi_log);
  */
 
 PAGE* read_node(BTREE* mp , pgno_t x);
-void addkey2node_log(PAGE* h ,BINTERNAL_LOG* bi_log);
+void addkey2node_log(PAGE* h ,BLOG* bi_log);
 void addkey2node( PAGE* h, BINTERNAL* bi, indx_t skip);
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
 void genLogFromNode(BTREE* t, PAGE* pg);
