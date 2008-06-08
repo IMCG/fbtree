@@ -41,7 +41,7 @@ void append_log_bi(PAGE* p , BINTERNAL_LOG* bi_log){
 BINTERNAL_LOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
     BINTERNAL_LOG* bi_log = (BINTERNAL_LOG*)malloc(NBINTERNAL_LOG_FROM_DISK(bi) );
     bi_log->ksize = bi->ksize;
-    bi_log->pgno = bi->pgno;
+    bi_log->u_pgno = bi->pgno;
     bi_log->nodeID = nodeID;
     bi_log->seqnum = seqnum;
     bi_log->logVersion = logVersion;
@@ -63,7 +63,7 @@ BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log){
 
     BINTERNAL* bi = (BINTERNAL*)malloc(NBINTERNAL_DISK_FROM_LOG(bi_log) );
     bi->ksize = bi_log->ksize;
-    bi->pgno = bi_log->pgno;
+    bi->pgno = bi_log->u_pgno;
     bi->flags = ADD_KEY;
     memcpy(bi->bytes,bi_log->bytes,bi_log->ksize);
     return bi;
@@ -74,7 +74,7 @@ BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log){
  */
 void log_dump(BINTERNAL_LOG* bi){
     err_debug(("[ ksize=%ud, nodeID=%ud, pgno=%ud, seqnum=%ud, logVersion=%ud ]",
-                bi->ksize, bi->nodeID, bi->pgno, bi->seqnum, bi->logVersion));
+                bi->ksize, bi->nodeID, bi->u_pgno, bi->seqnum, bi->logVersion));
 
 }
 
@@ -111,7 +111,7 @@ pgno_t logpool_put(BTREE* t ,BINTERNAL_LOG* bi_log){
     u_int32_t nbytes;
     indx_t index;
 
-    assert(bi_log->nodeID != bi_log->pgno);
+    assert(bi_log->nodeID != bi_log->u_pgno);
 
     nbytes = NBINTERNAL_LOG(bi_log->ksize);
     // first call
