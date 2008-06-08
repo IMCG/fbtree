@@ -30,21 +30,6 @@ NTTEntry* NTT_get(pgno_t pgno){
     return &NTT[pgno];
 
 }
-/* It seems using NTTentry directly is better */
-#if 0
-u_int32_t NTT_getLogVersion(pgno_t pgno){
-    if( pgno<=0 || pgno>NTT_MAXSIZE){
-       err_quit("pgno > NTT_MAXSIZE OR pgno<=0"); 
-    }
-    return NTT[pgno].logVersion;
-}
-u_int32_t NTT_getMaxSeq(pgno_t pgno){
-    if( pgno<=0 || pgno>NTT_MAXSIZE){
-       err_quit("pgno > NTT_MAXSIZE OR pgno<=0"); 
-    }
-    return NTT[pgno].maxSeq;
-}
-#endif
 /**
  * NTT_add - Add a new node to the NTT
  * @pg - page header of the new node

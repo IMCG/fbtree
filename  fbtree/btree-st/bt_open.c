@@ -322,15 +322,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	if (!F_ISSET(t, B_INMEM))
 		mpool_filter(t->bt_mp, __bt_pgin, __bt_pgout, t);
     
-    /* Initialize the log buffer pool */
-    /* ??? log buffer is a dependable buffer or contorled by bt_mp, it's a problem */
-#if 0
-	if ((t->bt_logmp =
-	    mpool_open(NULL, t->bt_fd, t->bt_psize, ncache)) == NULL)
-		goto err;
-	if (!F_ISSET(t, B_INMEM))
-		mpool_filter(t->bt_logmp, __bt_pgin, __bt_pgout, t);
-#endif
 	logpool_init(t);
     NTT_init(); 
     /* Create a root page if new tree. */

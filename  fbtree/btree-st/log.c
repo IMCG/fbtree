@@ -169,8 +169,7 @@ void genLogFromNode(BTREE* t, PAGE* pg){
     pgno_t pgno,npgno;
     pgno = P_INVALID;
     
-    err_debug0("~^");
-    err_debug(("Generate log entry from node %u",pg->pgno));
+    err_debug(("~^Generate log entry from node %u",pg->pgno));
 
     assert(pg->flags & P_BINTERNAL);
     assert(NEXTINDEX(pg)>0);
@@ -191,8 +190,7 @@ void genLogFromNode(BTREE* t, PAGE* pg){
         }
     }
     e->logVersion++;
-    err_debug0("~$");
-    err_debug1(("End Generate"));
+    err_debug(("~$End Generate"));
 }
 /**
  * mpool_sync_page - Write the pg
@@ -201,15 +199,3 @@ void genLogFromNode(BTREE* t, PAGE* pg){
 static void mpool_sync_page(MPOOL* mp, pgno_t pgno){
     mpool_sync(mp);
 }
-
-void wr_binternal_log(BINTERNAL_LOG* dest,BINTERNAL_LOG* src){
-    dest->ksize = src->ksize;
-    dest->nodeID = src->nodeID;
-    dest->pgno = src->pgno;
-    dest->seqnum = src->seqnum;
-    dest->logVersion = src->logVersion;
-    dest->flags = src->flags;
-    strncpy((char*)dest, src->bytes, src->ksize);
-
-}
-

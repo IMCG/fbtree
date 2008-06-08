@@ -42,12 +42,11 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 	BT_CLR(t);  /* @mx it initializes t->bt_sp  */
     err_debug1("Searh Btree");
 	for (pg = P_ROOT;;) {
-        err_debug0("~^");
+        err_debug(("~^"));
         err_debug(("Read Node %ud",pg));
         h = read_node(t,pg);
         //__bt_dpage(h);
-        err_debug0("~$");
-        err_debug1("End Read");
+        err_debug(("~$End Read"));
         if(h==NULL)
 			return (NULL);
         /* ??? not so clear about the binary search */
@@ -107,7 +106,6 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 
 next:		BT_PUSH(t, h->pgno, index);
         pg = GETBINTERNAL(h, index)->pgno;
-		err_debug(("--- index = %u, pg = %u ", index,pg)); 
 		mpool_put(t->bt_mp, h, 0);
 	}
 }
