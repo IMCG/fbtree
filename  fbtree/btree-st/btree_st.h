@@ -73,41 +73,41 @@ typedef struct _BLOG{
     LALIGN( NBLEAF(bl) +  sizeof(pgno_t) + 2*sizeof(u_int32_t))
 
 /* Get the number of bytes in the disk mode entry by the log mode entry 'bi' */
-#define NB_DISK_FROM_LOG(bi_log)    \
-    LALIGN( NBLOG(bi_log) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
+#define NB_DISK_FROM_LOG(blog)    \
+    LALIGN( NBLOG(blog) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
 
 /* Copy a BLOG entry to the page.
  * Note: p should be the destination to insert. It can also used to copy a BLOG to another BLOG (i.e. p=BLOG)
  */
-#define	WR_BLOG(p, binternal) {				\
-	*(u_int32_t *)p = binternal->ksize;			\
+#define	WR_BLOG(p, blog) {				\
+	*(u_int32_t *)p = blog->ksize;			\
     p += sizeof(u_int32_t);						\
-	*(pgno_t *)p = binternal->nodeID;			\
+	*(pgno_t *)p = blog->nodeID;			\
 	p += sizeof(pgno_t);					\
-	*(pgno_t *)p = (binternal->flags & LOG_INTERNAL) ? binternal->u_pgno : binternal->u_dsize ;   \
+	*(pgno_t *)p = (blog->flags & LOG_INTERNAL) ? blog->u_pgno : blog->u_dsize ;   \
 	p += sizeof(pgno_t);						\
-	*(pgno_t *)p = binternal->seqnum;			\
+	*(pgno_t *)p = blog->seqnum;			\
 	p += sizeof(u_int32_t);						\
-	*(pgno_t *)p = binternal->logVersion;		\
+	*(pgno_t *)p = blog->logVersion;		\
 	p += sizeof(u_int32_t);						\
-	*(u_char *)p = binternal->flags;						\
+	*(u_char *)p = blog->flags;						\
 	p += sizeof(u_char);						\
-    strncpy((char*)p, binternal->bytes, binternal->ksize + ((binternal->flags & LOG_INTERNAL) ? 0 : binternal->u_dsize) );    \
+    strncpy((char*)p, blog->bytes, blog->ksize + ((blog->flags & LOG_INTERNAL) ? 0 : blog->u_dsize) );    \
 }
 
 void log_dump(BLOG* log);
-void append_log(PAGE* p , BLOG* bi_log);
+void append_log(PAGE* p , BLOG* blog);
 BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
 BLOG* disk2log_bl(BLEAF* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
 
-void* log2disk_bi( BLOG* bi_log);
+void* log2disk( BLOG* blog);
 /* ----
  * = Section 3. Log Buffer =
  * ----
  */
 
 void logpool_init(BTREE* t);
-pgno_t logpool_put(BTREE* t,BLOG* bi_log);
+pgno_t logpool_put(BTREE* t,BLOG* blog);
 
 
 
@@ -117,7 +117,7 @@ pgno_t logpool_put(BTREE* t,BLOG* bi_log);
  */
 
 PAGE* read_node(BTREE* mp , pgno_t x);
-void addkey2node_log(PAGE* h ,BLOG* bi_log);
+void addkey2node_log(PAGE* h ,BLOG* blog);
 void addkey2node( PAGE* h, void* bi, indx_t skip);
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
 void genLogFromNode(BTREE* t, PAGE* pg);
