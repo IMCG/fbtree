@@ -37,15 +37,23 @@ void NTT_dump();
  */
 typedef struct _binternal_log{
 	u_int32_t ksize;		/* size of  key */
-	//u_int32_t dsize;		/* size of  data, for aligment */
 	pgno_t	nodeID;			/* pageno of log entry's owner */
-    pgno_t  pgno;           /* page number stored on */
+
+    union{
+	    u_int32_t u_dsize;		/* leaf node: size of  data */
+        pgno_t    u_pgno;       /* internal node: pointer */
+    }log_u;
+#define u_dsize log_u.u_dsize
+#define u_pgno log_u.u_pgno
+
     u_int32_t seqnum;       /* sequence number of log entry (to identify its order) */
     u_int32_t logVersion;   /* log version used in log compaction */
 /* P_BIGDATA,P_BIGKEY has been defined in BINTERNAL */
 #define ADD_KEY         0x04        /* log entry for add key */
 #define DELETE_KEY      0x08        /* log entry for delete key */
 #define UPDATE_POINTER  0x10        /* log entry for update pointer */
+#define LOG_INTERNAL    0x20        /* log entry for update pointer */
+#define LOG_LEAF        0x40        /* log entry for update pointer */
 	u_char	flags;
 	char	bytes[1];		/* data */
 }BINTERNAL_LOG;
@@ -72,7 +80,7 @@ typedef struct _binternal_log{
     p += sizeof(u_int32_t);						\
 	*(pgno_t *)p = binternal->nodeID;			\
 	p += sizeof(pgno_t);					\
-	*(pgno_t *)p = binternal->pgno;				\
+	*(pgno_t *)p = binternal->u_pgno;			\
 	p += sizeof(pgno_t);						\
 	*(pgno_t *)p = binternal->seqnum;			\
 	p += sizeof(u_int32_t);						\
@@ -94,17 +102,6 @@ BINTERNAL* log2disk_bi( BINTERNAL_LOG* bi_log);
 
 void logpool_init(BTREE* t);
 pgno_t logpool_put(BTREE* t,BINTERNAL_LOG* bi_log);
-
-/* NOT used at current time */
-#if 0
-typedef struct _bleaf_log{
-	u_int32_t ksize;		/* key size */
-	u_int32_t	ksize;		/* size of key */
-	u_int32_t	dsize;		/* size of data */
-	u_char	flags;			/* P_BIGDATA, P_BIGKEY */
-	char	bytes[1];		/* data */
-}LEAF_LOG;
-#endif
 
 /* ----
  * = Section 4. Node operation =
