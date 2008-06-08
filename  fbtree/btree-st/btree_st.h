@@ -37,7 +37,7 @@ void NTT_dump();
  */
 typedef struct _binternal_log{
 	u_int32_t ksize;		/* size of  key */
-	u_int32_t dsize;		/* size of  data, for aligment */
+	//u_int32_t dsize;		/* size of  data, for aligment */
 	pgno_t	nodeID;			/* pageno of log entry's owner */
     pgno_t  pgno;           /* page number stored on */
     u_int32_t seqnum;       /* sequence number of log entry (to identify its order) */
@@ -55,22 +55,20 @@ typedef struct _binternal_log{
 
 /* Get the number of bytes in the entry. */
 #define NBINTERNAL_LOG(len)							\
-	LALIGN(2*sizeof(u_int32_t) + 2*sizeof(pgno_t) + 2*sizeof(u_int32_t) + sizeof(u_char) + (len))
+	LALIGN(sizeof(u_int32_t) + 2*sizeof(pgno_t) + 2*sizeof(u_int32_t) + sizeof(u_char) + (len))
 
 /* Get the number of bytes in the log mode entry by the disk mode entry 'bi' */
 #define NBINTERNAL_LOG_FROM_DISK(bi)    \
-    LALIGN( NBINTERNAL(bi->ksize) +  sizeof(pgno_t) + 3*sizeof(u_int32_t))
+    LALIGN( NBINTERNAL(bi->ksize) +  sizeof(pgno_t) + 2*sizeof(u_int32_t))
 /* Get the number of bytes in the disk mode entry by the log mode entry 'bi' */
 #define NBINTERNAL_DISK_FROM_LOG(bi_log)    \
-    LALIGN( NBINTERNAL_LOG(bi_log->ksize) -  sizeof(pgno_t) - 3*sizeof(u_int32_t))
+    LALIGN( NBINTERNAL_LOG(bi_log->ksize) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
 
 /* Copy a BINTERNAL_LOG entry to the page.
  * Note: p should be the destination to insert. It can also used to copy a binternal_log to another binternal_log (i.e. p=binternal_log)
  */
 #define	WR_BINTERNAL_LOG(p, binternal) {				\
 	*(u_int32_t *)p = binternal->ksize;			\
-    p += sizeof(u_int32_t);						\
-	*(u_int32_t *)p = 0;			\
     p += sizeof(u_int32_t);						\
 	*(pgno_t *)p = binternal->nodeID;			\
 	p += sizeof(pgno_t);					\
