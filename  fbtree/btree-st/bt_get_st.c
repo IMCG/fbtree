@@ -49,8 +49,11 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 
 	if ((e = __bt_search_st(t, key, &exact)) == NULL)
 		return (RET_ERROR);
+    // e->page maybe a virtual node, it will no need to use mpool
+    // TODO: how to deal with the virtual node
 	if (!exact) {
-		mpool_put(t->bt_mp, e->page, 0);
+		//if(! (e->page->flags & P_MEM) )
+            mpool_put(t->bt_mp, e->page, 0);
 		return (RET_SPECIAL);
 	}
 
@@ -62,7 +65,8 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 	 * key/data, toss the page.
 	 */
 	if (F_ISSET(t, B_DB_LOCK))
-		mpool_put(t->bt_mp, e->page, 0);
+		//if(! (e->page->flags & P_MEM) )
+		    mpool_put(t->bt_mp, e->page, 0);
 	else
 		t->bt_pinned = e->page;
 	return (status);

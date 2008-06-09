@@ -94,8 +94,9 @@ PAGE* read_node(BTREE* t , pgno_t x){
     MPOOL* mp= t->bt_mp;
 
     entry = NTT_get(x);
+    head = &(entry->list);
     if( entry->flags & NODE_DISK){
-        h = mpool_get(mp,x,0);
+        h = mpool_get(mp,head->list.pgno,0);
 #ifdef NODE_DEBUG
         err_debug(("node %u: DISK|%s : %s",x,(h->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
         return h;
@@ -106,7 +107,6 @@ PAGE* read_node(BTREE* t , pgno_t x){
         err_debug(("node %u: LOG|%s : %s",x,(entry->flags & NODE_INTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
 #endif
         INIT_LIST_HEAD(&logCollector.list);
-        head = &(entry->list);
 
 #ifdef NODE_DEBUG
         err_debug(("~~^\niterate sector list"));
