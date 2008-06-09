@@ -93,7 +93,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	u_int32_t n, nbytes, nksize;
 	int parentsplit;
 	char *dest;
-    u_char mode; /* mode of current node */
+    u_char mode = NODE_DISK; /* mode of current node */
     NTTEntry* entry;
 
 	skip = argskip; /* @mx why not use argskip directly ? */
@@ -132,11 +132,10 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 #endif
 	h->linp[skip] = h->upper -= ilen;
 	dest = (char *)h + h->upper;
-	if (F_ISSET(t, R_RECNO))
-		WR_RLEAF(dest, data, flags)
-	else
-		WR_BLEAF(dest, key, data, flags)
-
+	WR_BLEAF(dest, key, data, flags)
+    if(mode & NODE_LOG){
+        genLogFromNode(t,h); 
+    }
 	/* If the root page was split, make it look right. */
 	if (sp->pgno == P_ROOT &&
 	    bt_broot(t, sp, l, r) == RET_ERROR)
@@ -219,37 +218,10 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 			bi = GETBINTERNAL(rchild, 0);
 			nbytes = NBINTERNAL(bi->ksize);
 			break;
-        /* ??? parent node is leaf? it seems strange */
 		case P_BLEAF:
 			bl = GETBLEAF(rchild, 0);
 			nbytes = NBINTERNAL(bl->ksize);
-// NO PREFIX COMPRESSION here {{{
-#if 0
-			if (t->bt_pfx && !(bl->flags & P_BIGKEY) &&
-			    (h->prevpg != P_INVALID || skip > 1)) {
-				tbl = GETBLEAF(lchild, NEXTINDEX(lchild) - 1);
-				a.size = tbl->ksize;
-				a.data = tbl->bytes;
-				b.size = bl->ksize;
-				b.data = bl->bytes;
-				nksize = t->bt_pfx(&a, &b);
-				n = NBINTERNAL(nksize);
-				if (n < nbytes) {
-#ifdef STATISTICS
-					bt_pfxsaved += nbytes - n;
-#endif
-					nbytes = n;
-				} else
-					nksize = 0;
-			} else
-#endif
-//}}}
 			nksize = 0;
-			break;
-
-		case P_RINTERNAL:
-		case P_RLEAF:
-			nbytes = NRINTERNAL;
 			break;
 		default:
 			abort();
@@ -300,46 +272,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 			    bt_preserve(t, *(pgno_t *)bl->bytes) == RET_ERROR)
 				goto err1;
 			break;
-#if 0
-//{{{
-		case P_RINTERNAL:
-            /*
-			 * Update the left page count.  If split
-			 * added at index 0, fix the correct page.
-			 */
-			if (skip > 0)
-				dest = (char *)h + h->linp[skip - 1];
-			else
-				dest = (char *)l + l->linp[NEXTINDEX(l) - 1];
-			((RINTERNAL *)dest)->nrecs = rec_total(lchild);
-			((RINTERNAL *)dest)->pgno = lchild->pgno;
-
-			/* Update the right page count. */
-			h->linp[skip] = h->upper -= nbytes;
-			dest = (char *)h + h->linp[skip];
-			((RINTERNAL *)dest)->nrecs = rec_total(rchild);
-			((RINTERNAL *)dest)->pgno = rchild->pgno;
-			break;
-		case P_RLEAF:
-			/*
-			 * Update the left page count.  If split
-			 * added at index 0, fix the correct page.
-			 */
-			if (skip > 0)
-				dest = (char *)h + h->linp[skip - 1];
-			else
-				dest = (char *)l + l->linp[NEXTINDEX(l) - 1];
-			((RINTERNAL *)dest)->nrecs = NEXTINDEX(lchild);
-			((RINTERNAL *)dest)->pgno = lchild->pgno;
-
-			/* Update the right page count. */
-			h->linp[skip] = h->upper -= nbytes;
-			dest = (char *)h + h->linp[skip];
-			((RINTERNAL *)dest)->nrecs = NEXTINDEX(rchild);
-			((RINTERNAL *)dest)->pgno = rchild->pgno;
-			break;
-//}}}
-#endif
 		default:
 			abort();
 		}
@@ -580,6 +512,8 @@ bt_root(t, h, lp, rp, skip, ilen)
 
 	*lp = l;
 	*rp = r;
+    //genLogFromNode(t,l);
+    //genLogFromNode(t,r);
 	return (tp);
 }
 
@@ -728,16 +662,6 @@ bt_psplit(t, h, l, r, pskip, ilen)
 				src = bl = GETBLEAF(h, nxt);
 				nbytes = NBLEAF(bl);
 				isbigkey = bl->flags & P_BIGKEY;
-				break;
-			case P_RINTERNAL:
-				src = GETRINTERNAL(h, nxt);
-				nbytes = NRINTERNAL;
-				isbigkey = 0;
-				break;
-			case P_RLEAF:
-				src = rl = GETRLEAF(h, nxt);
-				nbytes = NRLEAF(rl);
-				isbigkey = 0;
 				break;
 			default:
 				abort();

@@ -72,6 +72,11 @@ typedef struct _BLOG{
 #define NBLEAF_LOG_FROM_DISK(bl)    \
     LALIGN( NBLEAF(bl) +  sizeof(pgno_t) + 2*sizeof(u_int32_t))
 
+/* Get the number of bytes in the user's key/data pair. */
+#define NBLEAF_LOG_DBT(ksize, dsize)						\
+	LALIGN(sizeof(u_int32_t) + 2*sizeof(pgno_t) + 2*sizeof(u_int32_t) + sizeof(u_char) + \
+	    (ksize) + (dsize))
+
 /* Get the number of bytes in the disk mode entry by the log mode entry 'bi' */
 #define NB_DISK_FROM_LOG(blog)    \
     LALIGN( NBLOG(blog) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
@@ -98,8 +103,7 @@ typedef struct _BLOG{
 void log_dump(BLOG* log);
 void append_log(PAGE* p , BLOG* blog);
 BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
-BLOG* disk2log_bl(BLEAF* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
-
+BLOG* disk2log_bl(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
 void* log2disk( BLOG* blog);
 /* ----
  * = Section 3. Log Buffer =

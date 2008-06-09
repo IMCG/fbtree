@@ -35,6 +35,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	pgno_t pg;
 	u_int32_t nbytes;
 	int dflags, exact, status;
+    u_char mode = NODE_DISK; 
 	char *dest, db[NOVFLSIZE], kb[NOVFLSIZE];
 
 	t = dbp->internal;
@@ -136,18 +137,28 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 #ifdef BT_PUT_DEBUG
     err_debug(("leaf room is enough, insert"));
 #endif
-	if (index < (nxtindex = NEXTINDEX(h)))
-		memmove(h->linp + index + 1, h->linp + index,
-		    (nxtindex - index) * sizeof(indx_t));
-	h->lower += sizeof(indx_t);
+    if( mode & NODE_DISK){
+        if (index < (nxtindex = NEXTINDEX(h)))
+            memmove(h->linp + index + 1, h->linp + index,
+                (nxtindex - index) * sizeof(indx_t));
+        h->lower += sizeof(indx_t);
 
-	h->linp[index] = h->upper -= nbytes;
-	dest = (char *)h + h->upper;
-	WR_BLEAF(dest, key, data, dflags);
-    
+        h->linp[index] = h->upper -= nbytes;
+        dest = (char *)h + h->upper;
+        WR_BLEAF(dest, key, data, dflags);
+    }
+    else{
+        NTTEntry* entry;
+        BLOG* bl_log;
+        assert( mode & NODE_LOG );
+        entry =  NTT_get(h->pgno);
+        bl_log = disk2log_bl(key, data, h->pgno, entry->maxSeq++, entry->logVersion);
+        logpool_put(t,bl_log);
+    }
+
     // ??? not so clear about it
 	if (t->bt_order == NOT)
-		if (h->nextpg == P_INVALID) {
+		if (h->nextpg == P_INVALID){
 			if (index == NEXTINDEX(h) - 1) {
 				t->bt_order = FORWARD;
 				t->bt_last.index = index;
