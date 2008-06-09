@@ -31,10 +31,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
      * 1.Read from root of the btree in NTT
      * 2.reconstruct the node
      */
-    // read node from ROOT
-    // loop until we find the right node
-
-    PAGE *h;
+    PAGE *h;    /* h is a logical B-Tree node, either a disk mode node or a virtual node in memory construct by log */    
 	indx_t base, index, lim;
 	pgno_t pg;
 	int cmp;
@@ -75,6 +72,8 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 		 * which later deleted, and we're on a page with no matches
 		 * while there are matches on other pages.  If at the start or
 		 * end of a page, check the adjacent page.
+         *
+         * TODO: what about this condition?
 		 */
 		if (h->flags & P_BLEAF) {
 			if (!F_ISSET(t, B_NODUPS)) {
@@ -105,8 +104,11 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 		index = base ? base - 1 : base;
 
 next:		BT_PUSH(t, h->pgno, index);
+//        BT_PUSH(t, pg, index);
         pg = GETBINTERNAL(h, index)->pgno;
-		mpool_put(t->bt_mp, h, 0);
+        if( !(h->flags & P_MEM)  ){
+		    mpool_put(t->bt_mp, h, 0);
+        }
 	}
 }
 

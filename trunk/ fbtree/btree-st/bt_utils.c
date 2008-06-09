@@ -83,16 +83,7 @@ __bt_ret(t, e, key, rkey, data, rdata, copy)
 	if (key == NULL)
 		goto dataonly;
 
-	if (bl->flags & P_BIGKEY) {
-        err_quit("not support big key yet");
-        /* XXX No BIGKEY yet*/
-#if 0
-		if (__ovfl_get(t, bl->bytes,
-		    &key->size, &rkey->data, &rkey->size))
-			return (RET_ERROR);
-		key->data = rkey->data;
-#endif
-	} else if (copy || F_ISSET(t, B_DB_LOCK)) {
+    if (copy || F_ISSET(t, B_DB_LOCK)) {
 		if (bl->ksize > rkey->size) {
 			p = (void *)(rkey->data == NULL ?
 			    malloc(bl->ksize) : realloc(rkey->data, bl->ksize));
@@ -113,16 +104,7 @@ dataonly:
 	if (data == NULL)
 		return (RET_SUCCESS);
 
-	if (bl->flags & P_BIGDATA) {
-        err_quit("not support big data yet");
-        /* XXX No BIGDATA yet*/
-#if 0
-		if (__ovfl_get(t, bl->bytes + bl->ksize,
-		    &data->size, &rdata->data, &rdata->size))
-			return (RET_ERROR);
-		data->data = rdata->data;
-#endif
-	} else if (copy || F_ISSET(t, B_DB_LOCK)) {
+	if (copy || F_ISSET(t, B_DB_LOCK)) {
 		/* Use +1 in case the first record retrieved is 0 length. */
 		if (bl->dsize + 1 > rdata->size) {
 			p = (void *)(rdata->data == NULL ?

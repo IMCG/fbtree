@@ -8,6 +8,12 @@
  * = Section 1. Node Translation Table =
  * ----
  */
+
+/* convert the nodeID in NTT into disk pgno */
+#define nid2pgno(nid)   nid
+/* convert disk pgno into the nodeID in NTT */
+#define pgno2nid(pgno) pgno
+
 typedef struct _sectorlist{
     pgno_t pgno;
     struct list_head list;
