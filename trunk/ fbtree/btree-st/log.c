@@ -60,15 +60,16 @@ BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logV
  *
  * TODO we only deal with ADD_KEY here
  */
-BLOG* disk2log_bl(BLEAF* bl, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
-    BLOG* blog = (BLOG*)malloc(NBLEAF_LOG_FROM_DISK(bl) );
-    blog->ksize = bl->ksize;
-    blog->u_dsize = bl->dsize;
+BLOG* disk2log_bl(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
+    BLOG* blog = (BLOG*)malloc( NBLEAF_LOG_DBT(key->size,data->size) );
+    blog->ksize = key->size;
+    blog->u_dsize = data->size;
     blog->nodeID = nodeID;
     blog->seqnum = seqnum;
     blog->logVersion = logVersion;
     blog->flags = ADD_KEY | LOG_LEAF;
-    memcpy(blog->bytes,bl->bytes,bl->ksize+bl->dsize);
+    memcpy(blog->bytes,key,key->size);
+    memcpy(blog->bytes+key->size,data,data->size);
     return blog;
 }
 
