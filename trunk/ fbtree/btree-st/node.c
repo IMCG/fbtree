@@ -96,7 +96,8 @@ PAGE* read_node(BTREE* t , pgno_t x){
     entry = NTT_get(x);
     head = &(entry->list);
     if( entry->flags & NODE_DISK){
-        h = mpool_get(mp,head->list.pgno,0);
+        //h = mpool_get(mp,head.pgno,0);
+        h = mpool_get(mp,x,0);
 #ifdef NODE_DEBUG
         err_debug(("node %u: DISK|%s : %s",x,(h->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
         return h;
@@ -134,6 +135,7 @@ PAGE* read_node(BTREE* t , pgno_t x){
 #ifdef NODE_DEBUG
         err_debug(("~~$"));
 #endif
+
         h = mpool_get(mp,x,0);
 
         // construct the actual node of the page
