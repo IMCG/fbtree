@@ -52,9 +52,11 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
     // e->page maybe a virtual node, it will no need to use mpool
     // TODO: how to deal with the virtual node
 	if (!exact) {
-		//if(! (e->page->flags & P_MEM) )
+		if(! (e->page->flags & P_MEM) ){
             mpool_put(t->bt_mp, e->page, 0);
-		return (RET_SPECIAL);
+        }		
+        
+        return (RET_SPECIAL);
 	}
 
 	status = __bt_ret(t, e, NULL, NULL, data, &t->bt_rdata, 0);
@@ -64,9 +66,10 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 	 * If the user is doing concurrent access, we copied the
 	 * key/data, toss the page.
 	 */
-	if (F_ISSET(t, B_DB_LOCK))
-		//if(! (e->page->flags & P_MEM) )
+	if (F_ISSET(t, B_DB_LOCK)){
+		if(! (e->page->flags & P_MEM) )
 		    mpool_put(t->bt_mp, e->page, 0);
+    }
 	else
 		t->bt_pinned = e->page;
 	return (status);
