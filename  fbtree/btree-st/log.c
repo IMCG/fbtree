@@ -24,7 +24,10 @@ void append_log(PAGE* p , BLOG* blog){
     p->lower += sizeof(indx_t);
     p->linp[index] = p->upper-=nbytes;
     dest = (char*)p + p->upper;
+    err_debug(("hap")); 
+    log_dump(blog);
     WR_BLOG(dest, blog);
+    log_dump((BLOG*)((char*)p+p->upper ));
 
 }
 /**
@@ -68,8 +71,8 @@ BLOG* disk2log_bl(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_
     blog->seqnum = seqnum;
     blog->logVersion = logVersion;
     blog->flags = ADD_KEY | LOG_LEAF;
-    memcpy(blog->bytes,key,key->size);
-    memcpy(blog->bytes+key->size,data,data->size);
+    memcpy(blog->bytes, key->data, key->size);
+    memcpy( blog->bytes + key->size, data->data, data->size);
     return blog;
 }
 
@@ -112,11 +115,36 @@ void* log2disk( BLOG* blog){
  * BINTERNAL currently.
  */
 void log_dump(BLOG* bi){
-    err_debug(("[ ksize=%ud, nodeID=%ud, pgno=%ud, seqnum=%ud, logVersion=%ud ]",
-                bi->ksize, bi->nodeID, bi->u_pgno, bi->seqnum, bi->logVersion));
-
+  if(bi->flags & LOG_INTERNAL){
+    err_debug(("[ ksize=%u, nodeID=%u, pgno=%u, seqnum=%u, logVersion=%u, flags=%x, key=%u ]",
+                bi->ksize, bi->nodeID, bi->u_pgno, bi->seqnum, bi->logVersion, bi->flags, *(u_int32_t*)bi->bytes));
+  }
+  else{
+    assert(bi->flags & LOG_LEAF);
+    err_debug(("[ ksize=%u, nodeID=%u, dsize=%u, seqnum=%u, logVersion=%u, flags=%x, key=%u, data=%u]",
+                bi->ksize, bi->nodeID, bi->u_dsize, bi->seqnum, bi->logVersion, bi->flags, *(u_int32_t*)bi->bytes, *(u_int32_t*)(bi->bytes+bi->ksize) ));
+  }
 }
 
+/**
+ * disk mode dump 
+ */
+void disk_entry_dump(void* entry, u_int32_t flags){
+  BINTERNAL * bi;
+  BLEAF* bl;
+  if(flags & P_BINTERNAL){
+      bi  = (BINTERNAL*)entry;
+      err_debug(("[ ksize=%u, pgno=%u, flags=%x, key=%u ]",
+                bi->ksize, bi->pgno, bi->flags, *(u_int32_t*)bi->bytes));
+  }else{
+      assert(flags & P_BLEAF);
+      bl = (BLEAF*)entry;
+      err_debug(("[ ksize=%u, dsize=%u,flags=%x, key=%u, data=%u ]",
+                bl->ksize, bl->dsize, bl->flags, *(u_int32_t*)bl->bytes, *(u_int32_t*)(bl->bytes + bl->ksize) ));
+  }
+  
+  
+}
 /* ----
  * = Section 3. Log Buffer =
  * ----
@@ -149,9 +177,7 @@ pgno_t logpool_put(BTREE* t ,BLOG* blog){
     const char* err_loc = "(logpool_put) in 'log.c'";
     u_int32_t nbytes;
     indx_t index;
-
-    assert(blog->nodeID != blog->u_pgno);
-
+    
     nbytes = NBLOG(blog);
     // first call
     if (logbuf == NULL){
@@ -159,9 +185,6 @@ pgno_t logpool_put(BTREE* t ,BLOG* blog){
         logbuf = __bt_new(t,&pgno_logbuf);
     }
 
-#ifdef LOG_DEBUG
-    err_debug(("Before put a log into the log buffer pool: size = %ud, left = %ud", nbytes,logbuf->upper-logbuf->lower));
-#endif
 
 	if (logbuf->upper - logbuf->lower < nbytes + sizeof(indx_t)) {
 
@@ -172,7 +195,7 @@ pgno_t logpool_put(BTREE* t ,BLOG* blog){
         //FIXME tmp design, it should be pinned first, though it is actually
         logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
 
-        mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
+        Mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
         //mpool_sync_page(t->bt_mp,pgno_logbuf);
         logbuf = __bt_new(t,&pgno_logbuf);
         // ??? after sync, the page still be pinned?
@@ -186,11 +209,7 @@ pgno_t logpool_put(BTREE* t ,BLOG* blog){
 
     append_log(logbuf, blog);
     NTT_add_pgno(blog->nodeID,pgno_logbuf);
-    err_debug0("append log: ");
-    log_dump(blog);
-#ifdef LOG_DEBUG
-    err_debug(("After put a log into the log buffer pool: size = %ud, left = %ud", nbytes + sizeof(indx_t),logbuf->upper-logbuf->lower));
-#endif
+    Mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
 
     return pgno_logbuf;
 }
@@ -210,7 +229,6 @@ void genLogFromNode(BTREE* t, PAGE* pg){
     
     err_debug(("~^Generate log entry from node %u",pg->pgno));
 
-    assert(pg->flags & P_BINTERNAL);
     assert(NEXTINDEX(pg)>0);
     e = NTT_get(pg->pgno);
     for (i=0; i<NEXTINDEX(pg); i++){
@@ -237,4 +255,14 @@ void genLogFromNode(BTREE* t, PAGE* pg){
  */
 static void mpool_sync_page(MPOOL* mp, pgno_t pgno){
     mpool_sync(mp);
+}    
+
+void logpage_dump(PAGE* h){
+    BLOG* blog;
+    int i;
+    for(i =0 ; i<NEXTINDEX(h) ; i++){
+      blog = GETBLOG(h,i);
+      log_dump(blog);
+    }
 }
+

@@ -34,7 +34,7 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 #ifdef MPOOL_DEBUG
         err_debug(("Toss any page pinned across calls")); 
 #endif  
-		mpool_put(t->bt_mp, t->bt_pinned, 0);
+		Mpool_put(t->bt_mp, t->bt_pinned, 0);
 		t->bt_pinned = NULL;
 #ifdef MPOOL_DEBUG
         err_debug(("End Toss\n")); 
@@ -52,10 +52,7 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
     // e->page maybe a virtual node, it will no need to use mpool
     // TODO: how to deal with the virtual node
 	if (!exact) {
-		if(! (e->page->flags & P_MEM) ){
-            mpool_put(t->bt_mp, e->page, 0);
-        }		
-        
+        Mpool_put(t->bt_mp, e->page, 0);
         return (RET_SPECIAL);
 	}
 
@@ -67,8 +64,7 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 	 * key/data, toss the page.
 	 */
 	if (F_ISSET(t, B_DB_LOCK)){
-		if(! (e->page->flags & P_MEM) )
-		    mpool_put(t->bt_mp, e->page, 0);
+		Mpool_put(t->bt_mp, e->page, 0);
     }
 	else
 		t->bt_pinned = e->page;

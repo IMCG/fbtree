@@ -71,7 +71,7 @@ __bt_close(dbp)
 
 	/* Toss any page pinned across calls. */
 	if (t->bt_pinned != NULL) {
-		mpool_put(t->bt_mp, t->bt_pinned, 0);
+		Mpool_put(t->bt_mp, t->bt_pinned, 0);
 		t->bt_pinned = NULL;
 	}
 
@@ -127,7 +127,7 @@ __bt_sync(dbp, flags)
 
 	/* Toss any page pinned across calls. */
 	if (t->bt_pinned != NULL) {
-		mpool_put(t->bt_mp, t->bt_pinned, 0);
+		Mpool_put(t->bt_mp, t->bt_pinned, 0);
 		t->bt_pinned = NULL;
 	}
 
@@ -177,6 +177,6 @@ bt_meta(t)
 	m.flags = F_ISSET(t, SAVEMETA);
 
 	memmove(p, &m, sizeof(BTMETA));
-	mpool_put(t->bt_mp, p, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, p, MPOOL_DIRTY);
 	return (RET_SUCCESS);
 }

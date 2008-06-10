@@ -254,6 +254,7 @@ mpool_put(mp, page, flags)
 	u_int flags;
 {
 	BKT *bp;
+
 #ifdef STATISTICS
 	++mp->pageput;
 #endif

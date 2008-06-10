@@ -1,4 +1,6 @@
 #include "btree.h"
+
+static pgno_t new_node_id();
 /*
  * log list to collect entries of a node
  */
@@ -45,7 +47,6 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
 #ifdef NODE_DEBUG
     err_debug(("rebuild node %d", h->pgno));
 #endif
-    assert(h->flags & P_BINTERNAL);
     /* TODO sort the log entry by seqnum
      * XXX
      * you must sort the list to make it in order
@@ -70,11 +71,12 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
     return h;
 }
 
+
 /**
  * read_node - read Node[x] from mp
  *
  * @t: btree
- * @x: pgno of the node, i.e. id of the node
+ * @x: id of the node
  *
  * Read a node x from NTT.
  * If it's in disk mode, read it dorectly.
@@ -95,17 +97,17 @@ PAGE* read_node(BTREE* t , pgno_t x){
 
     entry = NTT_get(x);
     head = &(entry->list);
-    if( entry->flags & NODE_DISK){
-        //h = mpool_get(mp,head.pgno,0);
-        h = mpool_get(mp,x,0);
+    if( entry->flags & P_DISK){
+        h = mpool_get(mp,head->pgno,0);
+        //h = mpool_get(mp,x,0);
 #ifdef NODE_DEBUG
         err_debug(("node %u: DISK|%s : %s",x,(h->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
         return h;
 #endif
     }
-    else if(entry->flags & NODE_LOG){
+    else if(entry->flags & P_LOG){
 #ifdef NODE_DEBUG
-        err_debug(("node %u: LOG|%s : %s",x,(entry->flags & NODE_INTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
+        err_debug(("node %u: LOG|%s : %s",x,(entry->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
 #endif
         INIT_LIST_HEAD(&logCollector.list);
 
@@ -130,19 +132,17 @@ PAGE* read_node(BTREE* t , pgno_t x){
                     __log_collect(&logCollector,blog);
                 }
             }
-            mpool_put(mp,h,0);
+            Mpool_put(mp,h,0);
         }
 #ifdef NODE_DEBUG
         err_debug(("~~$"));
 #endif
 
-        h = mpool_get(mp,x,0);
-
         // construct the actual node of the page
 #ifdef NODE_DEBUG
-        err_debug(("~~^\nrebuild node"));
+        err_debug(("~~^\nRebuild node"));
 #endif
-        PAGE_INIT(t,h);
+        h = init_node_mem(t,x,entry->flags);
         __rebuild_node(h,&logCollector);
 #ifdef NODE_DEBUG
         err_debug(("~~$"));
@@ -171,6 +171,7 @@ void addkey2node_log(PAGE* h ,BLOG* blog){
 
     void* b_entry;
     indx_t skip;
+
     assert(blog !=NULL);
     b_entry = log2disk(blog);
     skip = search_node(h, blog->ksize, blog->bytes);
@@ -190,9 +191,16 @@ void addkey2node( PAGE* h, void* b_entry, indx_t skip){
     indx_t nxtindex;
     char * dest;
 	u_int32_t n, nbytes;
-    BINTERNAL* bi;
-    BLEAF* bl;
+    BINTERNAL* bi=NULL;
+    BLEAF* bl=NULL;
     assert(b_entry!=NULL);
+
+    DBT* key;
+    DBT* data;
+
+    err_debug(("uig")); 
+    disk_entry_dump(b_entry, h->flags);
+
     if(h->flags & P_BINTERNAL){
         bi = (BINTERNAL*)b_entry;
         nbytes = NBINTERNAL(bi->ksize) ;
@@ -216,8 +224,9 @@ void addkey2node( PAGE* h, void* b_entry, indx_t skip){
 	    memmove(dest, bi->bytes, bi->ksize);
     }
     else{
-        DBT* key;
-        DBT* data;
+        DBT ta,tb;
+        key = &ta;
+        data = &tb;
         key->size = bl->ksize; 
         key->data = bl->bytes;
         data->size = bl->dsize; 
@@ -244,10 +253,6 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
     int cmp; /* result of compare */
 
     const char err_loc[] = "(search_node) in 'node.c'";
-
-    if(h->flags & P_BLEAF){
-        err_quit("not support leaf search yet: %s", err_loc);
-    }
 
     k1.size=ksize;
     k1.data=(char*)bytes;
@@ -284,4 +289,99 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
     return index;
 }
 
+/**
+ * init_node_mem - create a virtual node in memory with nid
+ *
+ * @t: btree
+ * @nid: node id
+ *
+ * @return new memory page
+ */
+PAGE* init_node_mem(BTREE* t, pgno_t nid, u_char flags ){
+    PAGE* h = (PAGE*)malloc(t->bt_psize);
+    h->pgno = nid;
+	h->nextpg = P_INVALID;
+	h->prevpg = P_INVALID;
+	h->lower  = BTDATAOFF;
+	h->upper  = t->bt_psize;
+    h->flags = flags | P_MEM;
 
+    return h;
+}
+
+/*
+ * new_node -- Create a new node with assigned flags  
+ * 
+ * @t:	tree
+ * @nid: as a return value, the new node's node id
+ * @return: pointer to a new node
+ *
+ * To replace __bt_new
+ * NOTE it will add the new node to the NTT
+ */
+PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
+{
+	PAGE *h;
+    u_char mode;
+    pgno_t* npg; // for set h->pgno = *npg
+    mode = t->bt_mode;
+
+    *nid = new_node_id();
+    if(mode & P_DISK){
+        if (t->bt_free != P_INVALID &&
+            (h = mpool_get(t->bt_mp, t->bt_free, 0)) != NULL) {
+            *npg = t->bt_free;
+            t->bt_free = h->nextpg;
+#ifdef MPOOL_DEBUG
+            err_debug(("new page %ud from the freelist",*npg));
+#endif
+        }
+        else{
+	        h= mpool_new(t->bt_mp, npg);
+        }
+        h->flags = 0x0;
+    }
+    else{
+        assert( mode & P_LOG );
+        h = (PAGE*)malloc(t->bt_psize);
+        *npg = *nid;
+        h->flags = P_MEM; 
+    }
+    /* @mx 
+     * In the original version, the function don't initialize h.
+     * IMHO, it's not a good design, since some initial value can be default
+     * Here we set it. It won't affect other code either since they'll reset it
+     */
+    assert(h!=NULL);
+    h->pgno = *npg;
+	h->nextpg = P_INVALID;
+	h->prevpg = P_INVALID;
+	h->lower = BTDATAOFF;
+	h->upper = t->bt_psize;
+	h->flags |= flags;
+    NTT_add(*nid,h);
+    if(mode & P_DISK){
+        NTT_add_pgno(*nid,*npg);
+    }
+	return (h);
+}
+
+/**
+ * new_node_id - allocate a new node id
+ */
+static pgno_t new_node_id(){
+    static pgno_t maxpg = 0;
+    return ++maxpg;
+}
+
+/**
+ * Mpool_put - the same with Mpool_put except that it will check wheter page is just P_MEM first
+ */
+int Mpool_put( MPOOL *mp, void *page, u_int flags)
+{
+
+    if( ((PAGE*)page)->flags &  P_MEM ){
+	    return (RET_SUCCESS);
+    }
+    return mpool_put( mp, page, flags);
+}

@@ -322,7 +322,8 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	if (!F_ISSET(t, B_INMEM))
 		mpool_filter(t->bt_mp, __bt_pgin, __bt_pgout, t);
     
-	logpool_init(t);
+	t->bt_mode = P_LOG;
+    logpool_init(t);
     NTT_init(); 
     /* Create a root page if new tree. */
 	if (nroot(t) == RET_ERROR)
@@ -371,7 +372,7 @@ nroot(t)
 	pgno_t npg;
 
 	if ((meta = mpool_get(t->bt_mp, 0, 0)) != NULL) {
-		mpool_put(t->bt_mp, meta, 0);
+		Mpool_put(t->bt_mp, meta, 0);
 		return (RET_SUCCESS);
 	}
 	if (errno != EINVAL)		/* It's OK to not exist. */
@@ -381,21 +382,15 @@ nroot(t)
 	if ((meta = mpool_new(t->bt_mp, &npg)) == NULL)
 		return (RET_ERROR);
 
-	if ((root = mpool_new(t->bt_mp, &npg)) == NULL)
+	if ((root = new_node(t, &npg, P_BLEAF)) == NULL)
 		return (RET_ERROR);
 
-	if (npg != P_ROOT)
+	if (root->pgno != P_ROOT)
 		return (RET_ERROR);
-	root->pgno = npg;
-	root->prevpg = root->nextpg = P_INVALID;
-	root->lower = BTDATAOFF;
-	root->upper = t->bt_psize;
-	root->flags = P_BLEAF;
 	memset(meta, 0, t->bt_psize);
-	mpool_put(t->bt_mp, meta, MPOOL_DIRTY);
-	mpool_put(t->bt_mp, root, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, meta, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, root, MPOOL_DIRTY);
     
-    NTT_add(root);
 	return (RET_SUCCESS);
 }
 
@@ -453,7 +448,7 @@ __bt_fd(dbp)
 
 	/* Toss any page pinned across calls. */
 	if (t->bt_pinned != NULL) {
-		mpool_put(t->bt_mp, t->bt_pinned, 0);
+		Mpool_put(t->bt_mp, t->bt_pinned, 0);
 		t->bt_pinned = NULL;
 	}
 

@@ -22,19 +22,21 @@ typedef struct _NTTentry{
     u_int32_t   logVersion;
     u_int32_t   maxSeq;
     SectorList  list;
-#define NODE_LOG        0x01
-#define NODE_DISK       0x02
-#define NODE_LEAF       0x04
-#define NODE_INTERNAL   0x08
-#define NODE_INVALID    0x10    /* flags are also used to check whether is it valid node */
-    u_char        flags;        /* Note: clear NODE_INVALID when set others!!! */
+/* The Same with defintion in PAGE
+#define P_BINTERNAL   0x01
+#define P_BLEAF       0x02
+*/
+#define P_LOG        0x80
+#define P_DISK       0x100
+#define P_NOTUSED    0x200    /* flags are also used to check whether is it valid node */
+    u_int32_t        flags;        /* Note: clear P_NOTUSED when set others!!! */
 }NTTEntry;
 
 
 NTTEntry* NTT_get(pgno_t pgno);
 //u_int32_t NTT_getLogVersion(pgno_t pgno);
 //u_int32_t NTT_getMaxSeq(pgno_t pgno);
-void NTT_add(PAGE* pg);
+void NTT_add(pgno_t nid, PAGE* pg);
 void NTT_add_pgno(pgno_t nodeID, pgno_t pgno);
 void NTT_dump();
 /* ----
@@ -103,10 +105,16 @@ typedef struct _BLOG{
 	p += sizeof(u_int32_t);						\
 	*(u_char *)p = blog->flags;						\
 	p += sizeof(u_char);						\
-    strncpy((char*)p, blog->bytes, blog->ksize + ((blog->flags & LOG_INTERNAL) ? 0 : blog->u_dsize) );    \
+    strncpy((char*)p, blog->bytes, blog->ksize);    \
+    p+=blog->ksize; \
+    if( (blog->flags & LOG_LEAF)) strncpy((char*)p, blog->bytes+blog->ksize , blog->u_dsize);    \
 }
-
+//not euqle. why? 
+//strncpy((char*)p, blog->bytes, blog->ksize + ((blog->flags & LOG_INTERNAL) ? 0 : blog->u_dsize) );    
 void log_dump(BLOG* log);
+
+void disk_entry_dump(void* entry, u_int32_t flags);
+
 void append_log(PAGE* p , BLOG* blog);
 BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
 BLOG* disk2log_bl(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
@@ -126,10 +134,15 @@ pgno_t logpool_put(BTREE* t,BLOG* blog);
  * ----
  */
 
+int Mpool_put( MPOOL *mp, void *page, u_int flags);
 PAGE* read_node(BTREE* mp , pgno_t x);
 void addkey2node_log(PAGE* h ,BLOG* blog);
 void addkey2node( PAGE* h, void* bi, indx_t skip);
+
+PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags);
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
+PAGE* init_node_mem(BTREE* t, pgno_t nid, u_char flags );
+
 void genLogFromNode(BTREE* t, PAGE* pg);
 /*
 int CreateNode(pgno_t nodeID){

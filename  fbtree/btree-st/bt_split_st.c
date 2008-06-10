@@ -81,7 +81,7 @@ u_long	bt_rootsplit, bt_split, bt_sortsplit, bt_pfxsaved;
 int
 __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, size_t ilen, u_int32_t argskip)
 {
-    const char* err_loc = "function (__bt_split_st) in 'bt_split_st.c'";
+    const char* err_loc = "(__bt_split_st) in 'bt_split_st.c'";
 	BINTERNAL *bi;
 	BLOG *bi_log;
 	BLEAF *bl, *tbl;
@@ -93,7 +93,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	u_int32_t n, nbytes, nksize;
 	int parentsplit;
 	char *dest;
-    u_char mode = NODE_DISK; /* mode of current node */
+    u_char mode = t->bt_mode; /* mode of current node */
     NTTEntry* entry;
 
 	skip = argskip; /* @mx why not use argskip directly ? */
@@ -133,7 +133,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	h->linp[skip] = h->upper -= ilen;
 	dest = (char *)h + h->upper;
 	WR_BLEAF(dest, key, data, flags)
-    if(mode & NODE_LOG){
+    if(mode & P_LOG){
         genLogFromNode(t,h); 
     }
 	/* If the root page was split, make it look right. */
@@ -179,7 +179,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 */
 	while ((parent = BT_POP(t)) != NULL) {
         /* TODO: set the mode of the current page */
-        mode = NODE_LOG ;
+        mode = P_LOG ;
 
         lchild = l;
 		rchild = r; /* @mx use rchild to save value of r, because r is used to point to the new splited page,later. */
@@ -279,13 +279,13 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
         /* @mx parent is not splited, you only need to add a signle log entry */
 		if (!parentsplit) {
 
-            assert(     (  mode & ( NODE_DISK | NODE_LOG) ) 
-                    && !( (mode & NODE_DISK) && (mode & NODE_LOG))  );
+            assert(     (  mode & ( P_DISK | P_LOG) ) 
+                    && !( (mode & P_DISK) && (mode & P_LOG))  );
 
-            if(mode & NODE_DISK){
-			    mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+            if(mode & P_DISK){
+			    Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
             }
-            else if(mode & NODE_LOG){
+            else if(mode & P_LOG){
                 entry =  NTT_get(h->pgno);
                 bi_log = disk2log_bi((BINTERNAL*)((char *)h + h->linp[skip]), h->pgno, entry->maxSeq++, entry->logVersion);
                 log_dump(bi_log);
@@ -299,18 +299,17 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		    bt_broot(t, sp, l, r) == RET_ERROR)
 			goto err1;
 
-        if(mode & NODE_LOG){
-            if(h->flags & P_BINTERNAL)
-                genLogFromNode(t,h);
+        if(mode & P_LOG){
+            genLogFromNode(t,h);
         }
 
-		mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
-		mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
+		Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
+		Mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
 	}
 
 	/* Unpin the held pages. */
-	mpool_put(t->bt_mp, l, MPOOL_DIRTY);
-	mpool_put(t->bt_mp, r, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, l, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
 
 	/* Clear any pages left on the stack. */
 	return (RET_SUCCESS);
@@ -320,11 +319,11 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 * up the tree and the tree is now inconsistent.  Nothing much we can
 	 * do about it but release any memory we're holding.
 	 */
-err1:	mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
-	mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
+err1:	Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
 
-err2:	mpool_put(t->bt_mp, l, 0);
-	mpool_put(t->bt_mp, r, 0);
+err2:	Mpool_put(t->bt_mp, l, 0);
+	Mpool_put(t->bt_mp, r, 0);
 	__dbpanic(t->bt_dbp);
 	return (RET_ERROR);
 }
@@ -358,19 +357,14 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 #endif
     
 	/* ----
-     * = Strp 1. create a new node  =
+     * = Step 1. create a new node  =
      * ----
      */
 	/* Put the new right page for the split into place. */
-	if ((r = __bt_new(t, &npg)) == NULL)
+	if ((r = new_node(t, &npg, h->flags & P_TYPE)) == NULL)
 		return (NULL);
-	r->pgno = npg;
-	r->lower = BTDATAOFF;
-	r->upper = t->bt_psize;
 	r->nextpg = h->nextpg;
 	r->prevpg = h->pgno;
-	r->flags = h->flags & P_TYPE;
-    NTT_add(r);
 	/* ----
      * = Step 2. split node h =
      * ----
@@ -409,7 +403,7 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
      */
 	/* Put the new left page for the split into place. */
 	if ((l = (PAGE *)malloc(t->bt_psize)) == NULL) {
-		mpool_put(t->bt_mp, r, 0);
+		Mpool_put(t->bt_mp, r, 0);
 		return (NULL);
 	}
 #ifdef PURIFY
@@ -429,7 +423,7 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
             return (NULL);
 		}
 		tp->prevpg = r->pgno;
-		mpool_put(t->bt_mp, tp, MPOOL_DIRTY);
+		Mpool_put(t->bt_mp, tp, MPOOL_DIRTY);
 	}
 
 	/*
@@ -448,11 +442,11 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 	memmove(h, l, t->bt_psize);
 	if (tp == l){
 		tp = h;
-        if(r->flags & P_BINTERNAL)
+        if(t->bt_mode & P_LOG)
             genLogFromNode(t,r);
     }
     else{  /* tp==r  */
-        if(r->flags & P_BINTERNAL)
+        if(t->bt_mode & P_LOG)
             genLogFromNode(t,h);
     }
 	free(l);
@@ -492,21 +486,13 @@ bt_root(t, h, lp, rp, skip, ilen)
 	++bt_split;
 	++bt_rootsplit;
 #endif
-	/* Put the new left and right pages for the split into place. */
-	if ((l = __bt_new(t, &lnpg)) == NULL ||
-	    (r = __bt_new(t, &rnpg)) == NULL)
+	/* Put the new left and right pager s for the split into place. */
+	if ((l = new_node(t, &lnpg, h->flags & P_TYPE)) == NULL ||
+	    (r = new_node(t, &rnpg, h->flags & P_TYPE)) == NULL)
 		return (NULL);
-	l->pgno = lnpg;
-	r->pgno = rnpg;
 	l->nextpg = r->pgno;
 	r->prevpg = l->pgno;
-	l->prevpg = r->nextpg = P_INVALID;
-	l->lower = r->lower = BTDATAOFF;
-	l->upper = r->upper = t->bt_psize;
-	l->flags = r->flags = h->flags & P_TYPE;
 
-    NTT_add(l);
-    NTT_add(r);
 	/* Split the root page. */
 	tp = bt_psplit(t, h, l, r, skip, ilen);
 
@@ -572,7 +558,7 @@ bt_broot(t, h, l, r)
 #ifdef NTT_DEBUG
         err_debug(("Change root into (INTERNAL|LOG)"));
 #endif
-        entry->flags = NODE_INTERNAL | NODE_LOG;
+        entry->flags = P_BINTERNAL | P_LOG;
 
 		/*
 		 * If the key is on an overflow page, mark the overflow chain
@@ -600,7 +586,7 @@ bt_broot(t, h, l, r)
 	/* Unpin the root page, set to btree internal page. */
 	h->flags &= ~P_TYPE;
 	h->flags |= P_BINTERNAL;
-	mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 
 	return (RET_SUCCESS);
 }
@@ -651,7 +637,7 @@ bt_psplit(t, h, l, r, pskip, ilen)
 		if (skip == off) {
 			nbytes = ilen;
 			isbigkey = 0;		/* XXX: not really known. */
-		} else
+		} else{
 			switch (h->flags & P_TYPE) {
 			case P_BINTERNAL:
 				src = bi = GETBINTERNAL(h, nxt);
@@ -666,6 +652,7 @@ bt_psplit(t, h, l, r, pskip, ilen)
 			default:
 				abort();
 			}
+        }
 
 		/*
 		 * If the key/data pairs are substantial fractions of the max
@@ -796,7 +783,7 @@ bt_preserve(t, pg)
 	if ((h = mpool_get(t->bt_mp, pg, 0)) == NULL)
 		return (RET_ERROR);
 	h->flags |= P_PRESERVE;
-	mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 	return (RET_SUCCESS);
 }
 
