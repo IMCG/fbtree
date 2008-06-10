@@ -35,17 +35,18 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	pgno_t pg;
 	u_int32_t nbytes;
 	int dflags, exact, status;
-    u_char mode = NODE_DISK; 
+    u_int32_t mode; 
 	char *dest, db[NOVFLSIZE], kb[NOVFLSIZE];
 
 	t = dbp->internal;
+    mode = t->bt_mode;
 
 	/* Toss any page pinned across calls. */
 	if (t->bt_pinned != NULL) {
 #ifdef MPOOL_DEBUG
         err_debug(("Toss any page pinned across calls")); 
 #endif  
-		mpool_put(t->bt_mp, t->bt_pinned, 0);
+		Mpool_put(t->bt_mp, t->bt_pinned, 0);
 		t->bt_pinned = NULL;
 #ifdef MPOOL_DEBUG
         err_debug(("End Toss\n")); 
@@ -92,7 +93,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	case R_NOOVERWRITE:
 		if (!exact)
 			break;
-		mpool_put(t->bt_mp, h, 0);
+		Mpool_put(t->bt_mp, h, 0);
 		return (RET_SPECIAL);
 	default:
 		if (!exact || !F_ISSET(t, B_NODUPS))
@@ -105,7 +106,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 		 * new entry into the page immediately.
 		 */
 delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
-			mpool_put(t->bt_mp, h, 0);
+			Mpool_put(t->bt_mp, h, 0);
 			return (RET_ERROR);
 		}
 		break;
@@ -137,7 +138,7 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 #ifdef BT_PUT_DEBUG
     err_debug(("leaf room is enough, insert"));
 #endif
-    if( mode & NODE_DISK){
+    if( mode & P_DISK){
         if (index < (nxtindex = NEXTINDEX(h)))
             memmove(h->linp + index + 1, h->linp + index,
                 (nxtindex - index) * sizeof(indx_t));
@@ -150,13 +151,13 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
     else{
         NTTEntry* entry;
         BLOG* bl_log;
-        assert( mode & NODE_LOG );
+        assert( (mode & P_LOG) && (h->flags & (P_MEM|P_BLEAF )) );
         entry =  NTT_get(h->pgno);
         bl_log = disk2log_bl(key, data, h->pgno, entry->maxSeq++, entry->logVersion);
         logpool_put(t,bl_log);
     }
 
-    // ??? not so clear about it
+    // if the insert position is the leftmost/rightmost, set them   
 	if (t->bt_order == NOT)
 		if (h->nextpg == P_INVALID){
 			if (index == NEXTINDEX(h) - 1) {
@@ -172,7 +173,7 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 			}
 		}
 
-	mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 
 success:
 	F_SET(t, B_MODIFIED);
@@ -192,13 +193,15 @@ u_long bt_cache_hit, bt_cache_miss;
  *
  * Returns:
  * 	EPG for new record or NULL if not found.
+ *
+ * @ only check the leftmost leaf and rightmost leaf
+ *
+ * TODO:XXX: disable the function for test 
  */
 static EPG *
-bt_fast(t, key, data, exactp)
-	BTREE *t;
-	const DBT *key, *data;
-	int *exactp;
+bt_fast( BTREE *t, const DBT *key, const DBT *data, int *exactp )
 {
+#if 0
     const char* err_loc = "(bt_fast) in 'bt_put_st.c'";
 	PAGE *h;
 	u_int32_t nbytes;
@@ -249,6 +252,7 @@ miss:
 	++bt_cache_miss;
 #endif
 	t->bt_order = NOT;
-	mpool_put(t->bt_mp, h, 0);
+	Mpool_put(t->bt_mp, h, 0);
+#endif
 	return (NULL);
 }

@@ -88,7 +88,7 @@ __bt_dump(dbp)
 
 	for (i = P_ROOT; (h = mpool_get(t->bt_mp, i, 0)) != NULL; ++i) {
 		__bt_dpage(h);
-		(void)mpool_put(t->bt_mp, h, 0);
+		(void)Mpool_put(t->bt_mp, h, 0);
 	}
 }
 
@@ -143,7 +143,7 @@ __bt_dnpage(dbp, pgno)
 	t = dbp->internal;
 	if ((h = mpool_get(t->bt_mp, pgno, 0)) != NULL) {
 		__bt_dpage(h);
-		(void)mpool_put(t->bt_mp, h, 0);
+		(void)Mpool_put(t->bt_mp, h, 0);
 	}
 }
 
@@ -267,7 +267,7 @@ __bt_stat(dbp)
 			++pcont;
 			break;
 		}
-		(void)mpool_put(t->bt_mp, h, 0);
+		(void)Mpool_put(t->bt_mp, h, 0);
 	}
 
 	/* Count the levels of the tree. */
@@ -276,13 +276,13 @@ __bt_stat(dbp)
 		if (h->flags & (P_BLEAF|P_RLEAF)) {
 			if (levels == 0)
 				levels = 1;
-			(void)mpool_put(t->bt_mp, h, 0);
+			(void)Mpool_put(t->bt_mp, h, 0);
 			break;
 		}
 		i = F_ISSET(t, R_RECNO) ?
 		    GETRINTERNAL(h, 0)->pgno :
 		    GETBINTERNAL(h, 0)->pgno;
-		(void)mpool_put(t->bt_mp, h, 0);
+		(void)Mpool_put(t->bt_mp, h, 0);
 	}
 
 	(void)fprintf(stderr, "%d level%s with %ld keys",

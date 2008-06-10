@@ -54,7 +54,7 @@ static char sccsid[] = "@(#)bt_page.c	8.3 (Berkeley) 7/14/94";
  *	RET_ERROR, RET_SUCCESS
  *
  * Side-effect:
- *	mpool_put's the page.
+ *	Mpool_put's the page.
  */
 int
 __bt_free(t, h)
@@ -67,7 +67,7 @@ __bt_free(t, h)
 	t->bt_free = h->pgno;
 
 	/* Make sure the page gets written back. */
-	return (mpool_put(t->bt_mp, h, MPOOL_DIRTY));
+	return (Mpool_put(t->bt_mp, h, MPOOL_DIRTY));
 }
 
 /*
@@ -86,7 +86,8 @@ PAGE *
 __bt_new( BTREE *t, pgno_t *npg)
 {
 	PAGE *h;
-
+    u_char mode;
+    mode = t->bt_mode;
 	if (t->bt_free != P_INVALID &&
 	    (h = mpool_get(t->bt_mp, t->bt_free, 0)) != NULL) {
 		*npg = t->bt_free;

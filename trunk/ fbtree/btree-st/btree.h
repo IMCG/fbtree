@@ -107,15 +107,6 @@ typedef struct _page {
 	    sizeof(u_int32_t) + sizeof(indx_t) + sizeof(indx_t))
 #define	NEXTINDEX(p)	(((p)->lower - BTDATAOFF) / sizeof(indx_t))
 
-/*initialize a new page */
-#define PAGE_INIT(t,h) \
-	h->lower  = BTDATAOFF; \
-	h->upper  = t->bt_psize; \
-	h->nextpg = NULL; \
-	h->prevpg = NULL; \
-    h->flags = P_BINTERNAL;
-
-
 /*
  * For pages other than overflow pages, there is an array of offsets into the
  * rest of the page immediately following the page header.  Each offset is to
@@ -364,6 +355,7 @@ typedef struct _btree {
 					/* sorted order @mx XXX ? */
 	enum { NOT, BACK, FORWARD } bt_order;
 	EPGNO	  bt_last;		/* last insert */
+    u_char    bt_mode;         /* latest mode of node */ 
 
 					/* B: key comparison function */
 	int	(*bt_cmp) __P((const DBT *, const DBT *));

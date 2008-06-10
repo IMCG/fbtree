@@ -105,9 +105,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 
 next:	BT_PUSH(t, pg, index);
         pg = GETBINTERNAL(h, index)->pgno;
-        if( !(h->flags & P_MEM)  ){
-		    mpool_put(t->bt_mp, h, 0);
-        }
+		Mpool_put(t->bt_mp, h, 0);
 	}
 }
 
@@ -141,12 +139,12 @@ __bt_snext(t, h, key, exactp)
 		return (0);
 	e.index = 0;
 	if (__bt_cmp(t, key, &e) == 0) {
-		mpool_put(t->bt_mp, h, 0);
+		Mpool_put(t->bt_mp, h, 0);
 		t->bt_cur = e;
 		*exactp = 1;
 		return (1);
 	}
-	mpool_put(t->bt_mp, e.page, 0);
+	Mpool_put(t->bt_mp, e.page, 0);
 	return (0);
 }
 
@@ -180,11 +178,11 @@ __bt_sprev(t, h, key, exactp)
 		return (0);
 	e.index = NEXTINDEX(e.page) - 1;
 	if (__bt_cmp(t, key, &e) == 0) {
-		mpool_put(t->bt_mp, h, 0);
+		Mpool_put(t->bt_mp, h, 0);
 		t->bt_cur = e;
 		*exactp = 1;
 		return (1);
 	}
-	mpool_put(t->bt_mp, e.page, 0);
+	Mpool_put(t->bt_mp, e.page, 0);
 	return (0);
 }

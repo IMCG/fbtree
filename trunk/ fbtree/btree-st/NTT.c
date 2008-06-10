@@ -14,7 +14,7 @@ static NTTEntry NTT[NTT_MAXSIZE];
 int NTT_init(){
     int i;
     for(i=1; i<NTT_MAXSIZE; i++){
-        NTT[i].flags = NODE_INVALID;
+        NTT[i].flags = P_NOTUSED;
         NTT[i].logVersion = 0;
     }
 }
@@ -24,44 +24,34 @@ int NTT_init(){
  */
 NTTEntry* NTT_get(pgno_t pgno){
     //const char* err_loc = "function (NTT_get) in NTT.c";
-    //err_debug(("pgno = %ud\n", pgno));
+    err_debug(("pgno = %ud\n", pgno));
     assert( pgno > 0 && pgno<= NTT_MAXSIZE);
     
     return &NTT[pgno];
 
 }
 /**
- * NTT_add - Add a new node to the NTT
+ * NTT_add - Add a new node[nid] to the NTT
+ * @nid - node id 
  * @pg - page header of the new node
  *
  * For log mode node, we construct pg as an identifier of node
  */
-void NTT_add(PAGE* pg){
-    const char * err_loc = "function (NTT_add) in 'NTT.c'";
-    pgno_t pgno = pg->pgno;
+void NTT_add(pgno_t nid, PAGE* pg){
+    const char * err_loc = "(NTT_add) in 'NTT.c'";
     NTTEntry* entry;
 
-    entry = NTT_get(pgno);
+    entry = NTT_get(nid);
+    
     /* XXX free NTT's Sector List */
-    if(pg->flags & P_BLEAF){
-        entry->flags = NODE_DISK | NODE_LEAF;
-#ifdef NTT_DEBUG
-        err_debug(("Add the (DISK|LEAF) PAGE %ud to the NTT", pgno));
-#endif
-    }
-    else if(pg->flags & P_BINTERNAL){
-        /* FIXME it should be ? */
-        entry->flags = NODE_INTERNAL | NODE_LOG;
-#ifdef NTT_DEBUG
-        err_debug(("Add the (LOG|INTERNAL) PAGE %ud to the NTT", pgno));
-#endif
-    }
-    else{
-        err_quit("unknown flags: %s",err_loc);
+    if(pg->flags & P_MEM){
+        entry->flags = pg->flags | P_LOG ;
+    }else{
+        entry->flags = pg->flags | P_DISK ;
     }
     entry->logVersion = 0;
     entry->maxSeq= 0;
-    INIT_LIST_HEAD(&(NTT[pgno].list.list));
+    INIT_LIST_HEAD(&(NTT[nid].list.list));
 
 }
 
@@ -101,12 +91,12 @@ void NTT_dump( ){
 
     for( i=1; i<NTT_MAXSIZE ; i++){
         entry = NTT_get(i);
-        if(entry->flags & NODE_INVALID) continue;
+        if(entry->flags & P_NOTUSED) continue;
         fprintf(stderr,"NTT[%ud]: ", i);
         fprintf(stderr," logVersion = %ud, ", entry->logVersion);
         fprintf(stderr," maxSeq = %ud, ", entry->maxSeq);
-        fprintf(stderr," flags = %s |", (entry->flags & NODE_LOG) ? "NODE_LOG": "NODE_DISK");
-        fprintf(stderr," %s, ", (entry->flags & NODE_LEAF) ? "NODE_LEAF": "NODE_INTERNAL");
+        fprintf(stderr," flags = %s |", (entry->flags & P_LOG) ? "P_LOG": "P_DISK");
+        fprintf(stderr," %s, ", (entry->flags & P_BLEAF) ? "P_BLEAF": "P_BINTERNAL");
 
         slist = & entry->list;
         fprintf(stderr,"slist = (");
