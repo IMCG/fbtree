@@ -263,6 +263,8 @@ mpool_put(mp, page, flags)
 #ifdef MPOOL_DEBUG
     err_debug(("put page %ud",bp->pgno));
 #endif
+    //FIXME: comment for debug
+#if 0
 #ifdef DEBUG
 	if (!(bp->flags & MPOOL_PINNED)) {
 		(void)fprintf(stderr,
@@ -270,6 +272,8 @@ mpool_put(mp, page, flags)
 		abort();
 	}
 #endif
+#endif
+
 	bp->flags &= ~MPOOL_PINNED;
 	bp->flags |= flags & MPOOL_DIRTY;
 	return (RET_SUCCESS);
