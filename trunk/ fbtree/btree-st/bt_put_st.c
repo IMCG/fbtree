@@ -153,7 +153,7 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
         BLOG* bl_log;
         assert( (mode & P_LOG) && (h->flags & (P_MEM|P_BLEAF )) );
         entry =  NTT_get(h->pgno);
-        bl_log = disk2log_bl(key, data, h->pgno, entry->maxSeq++, entry->logVersion);
+        bl_log = disk2log_bl_dbt(key, data, h->pgno, entry->maxSeq++, entry->logVersion);
         logpool_put(t,bl_log);
     }
 

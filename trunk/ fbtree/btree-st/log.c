@@ -24,10 +24,9 @@ void append_log(PAGE* p , BLOG* blog){
     p->lower += sizeof(indx_t);
     p->linp[index] = p->upper-=nbytes;
     dest = (char*)p + p->upper;
-    err_debug(("hap")); 
-    log_dump(blog);
     WR_BLOG(dest, blog);
-    log_dump((BLOG*)((char*)p+p->upper ));
+    //err_debug(("append log")); 
+    //log_dump((BLOG*)((char*)p+p->upper ));
 
 }
 /**
@@ -53,7 +52,7 @@ BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logV
     return blog;
 }
 /**
- * disk2log - convert a btree leaf entry of disk mode into log mode
+ * disk2log_bl - convert a btree leaf entry of disk mode into log mode
  *
  * @bi: bleaf entry with disk mode
  * @seqnum: sequence number of the new log entry
@@ -63,7 +62,32 @@ BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logV
  *
  * TODO we only deal with ADD_KEY here
  */
-BLOG* disk2log_bl(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
+
+BLOG* disk2log_bl(BLEAF* bl, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
+    BLOG* blog = (BLOG*)malloc( NBLEAF_LOG_FROM_DISK(bl) );
+    blog->ksize = bl->ksize;
+    blog->u_dsize = bl->dsize;
+    blog->nodeID = nodeID;
+    blog->seqnum = seqnum;
+    blog->logVersion = logVersion;
+    blog->flags = ADD_KEY | LOG_LEAF;
+    memcpy(blog->bytes, bl->bytes, bl->ksize);
+    memcpy( blog->bytes + bl->ksize, bl->bytes + bl->ksize , bl->dsize);
+    return blog;
+}
+
+/**
+ * disk2log_bl_dbt - convert a btree leaf entry of disk mode into log mode
+ *
+ * @bi: bleaf entry with disk mode
+ * @seqnum: sequence number of the new log entry
+ * @logVersion: version of the new log entry
+ *
+ * @return: bleaf entry with log mode
+ *
+ * TODO we only deal with ADD_KEY here
+ */
+BLOG* disk2log_bl_dbt(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
     BLOG* blog = (BLOG*)malloc( NBLEAF_LOG_DBT(key->size,data->size) );
     blog->ksize = key->size;
     blog->u_dsize = data->size;
@@ -196,14 +220,14 @@ pgno_t logpool_put(BTREE* t ,BLOG* blog){
         logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
 
         Mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
-        //mpool_sync_page(t->bt_mp,pgno_logbuf);
+        mpool_sync_page(t->bt_mp,pgno_logbuf);
         logbuf = __bt_new(t,&pgno_logbuf);
         // ??? after sync, the page still be pinned?
         logbuf->pgno  = pgno_logbuf;
         logbuf->prevpg = logbuf->nextpg = P_INVALID;
-	    logbuf->lower = BTDATAOFF;
-	    logbuf->upper = t->bt_psize;
-        //TODO logbuf->flags = 
+	      logbuf->lower = BTDATAOFF;
+	      logbuf->upper = t->bt_psize;
+        //logbuf->flags = P_LOG;
 
     }
 
@@ -215,37 +239,46 @@ pgno_t logpool_put(BTREE* t ,BLOG* blog){
 }
 /**
  * genLogFromNode - generate log entries from a disk mode node AND put them into log buffer.
- * @pg: the node's page lister
+ * @pg: the node's page header
  *
  * we convert the real node into a set of log entries
  */
 void genLogFromNode(BTREE* t, PAGE* pg){
     unsigned int i;
-    BINTERNAL* bi;
+    BINTERNAL* bi=NULL;
+    BLEAF* bl=NULL;
     BLOG* blog;
     NTTEntry* e;
     pgno_t pgno,npgno;
     pgno = P_INVALID;
-    
+    int flag;
     err_debug(("~^Generate log entry from node %u",pg->pgno));
 
     assert(NEXTINDEX(pg)>0);
     e = NTT_get(pg->pgno);
-    for (i=0; i<NEXTINDEX(pg); i++){
-        bi = GETBINTERNAL(pg,i);
-        assert(bi!=NULL);
-
-        blog = disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
-
-        /* TODO XXX ensure atomic operation we should compute the size first */
-        npgno = logpool_put(t,blog);
-        e->maxSeq++;
-        //XXX e is refecthed in NTT_add_pgno
-        if(npgno!=pgno){
-            NTT_add_pgno(pg->pgno,npgno);
-            pgno = npgno;
+    flag = pg->flags & P_BINTERNAL;
+    assert( (flag) || ( (!flag) && (pg->flags & P_BLEAF)) );
+        for (i=0; i<NEXTINDEX(pg); i++){
+            if(flag){
+                bi = GETBINTERNAL(pg,i);
+                assert(bi!=NULL);
+                blog = disk2log_bi(bi,pg->pgno,e->maxSeq+1,e->logVersion+1);
+            }else{
+                bl = GETBLEAF(pg,i);
+                assert(bl!=NULL);
+                blog = disk2log_bl(bl,pg->pgno,e->maxSeq+1,e->logVersion+1);
+            }
+            /* TODO To ensure atomic operation we should compute the size first */
+            npgno = logpool_put(t,blog);
+            e->maxSeq++;
+            //XXX e is refecthed in NTT_add_pgno, maybe lost effeciency
+            if(npgno!=pgno){
+                NTT_add_pgno(pg->pgno,npgno);
+                pgno = npgno;
+            }
         }
-    }
+
+        
     e->logVersion++;
     err_debug(("~$End Generate"));
 }

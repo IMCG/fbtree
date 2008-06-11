@@ -1,4 +1,5 @@
 #include "btree.h"
+#include "list.h"
 /*use an arry to implement NTT first*/
 #define NTT_MAXSIZE 256 
 //static NTTEntry NTT[NTT_MAXSIZE];
@@ -82,7 +83,23 @@ void NTT_add_pgno(pgno_t nodeID, pgno_t pgno){
     nslist->pgno = pgno;
     list_add(&(nslist->list),&(slist->list));
 }
+/**
+ * delete sector list of the NTTEntry *entry*, and reset NTT
+ */
+void NTT_del_list(NTTEntry* entry){
+    SectorList *slist_entry, *tmp;
+    entry->logVersion = 0;
+    entry->maxSeq = 0;
+    INIT_LIST_HEAD(&(entry->list.list));
+    //FIXME : real delete later
+#if 0
+    list_for_each_entry_safe(slist_entry,tmp,&(entry->list.list),list){
+       list_del(slist_entry);
+       free(tmp);
+    }
+#endif
 
+}
 void NTT_dump( ){
     NTTEntry* entry;
     SectorList* slist;

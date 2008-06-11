@@ -57,6 +57,7 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
         log = entry->log;
         assert(!( (log->flags & P_BIGKEY) | (log->flags & P_BIGDATA)));
         if(log->flags & ADD_KEY){
+            //log_dump(log);
             addkey2node_log(h,log);
         }
         else if(log->flags & DELETE_KEY){
@@ -84,15 +85,15 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
  */
 PAGE* read_node(BTREE* t , pgno_t x){
     const char* err_loc = "(read_node)";
-    PAGE *h;
+    PAGE *h=NULL;
     pgno_t pg;
-    BLOG * blog;
+    BLOG * blog=NULL;
     LogList logCollector;
     int i;
 
-    NTTEntry*   entry;
-    SectorList* head;/* head of the list */
-    SectorList* slist;
+    NTTEntry*   entry=NULL;
+    SectorList* head=NULL;/* head of the list */
+    SectorList* slist=NULL;
     MPOOL* mp= t->bt_mp;
 
     entry = NTT_get(x);
@@ -100,20 +101,11 @@ PAGE* read_node(BTREE* t , pgno_t x){
     if( entry->flags & P_DISK){
         h = mpool_get(mp,head->pgno,0);
         //h = mpool_get(mp,x,0);
-#ifdef NODE_DEBUG
-        err_debug(("node %u: DISK|%s : %s",x,(h->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
         return h;
-#endif
     }
     else if(entry->flags & P_LOG){
-#ifdef NODE_DEBUG
-        err_debug(("node %u: LOG|%s : %s",x,(entry->flags & P_BINTERNAL) ? "INTERNAL": "LEAF" ,err_loc));
-#endif
         INIT_LIST_HEAD(&logCollector.list);
 
-#ifdef NODE_DEBUG
-        err_debug(("~~^\niterate sector list"));
-#endif
         // iterate the list
         list_for_each_entry(slist , &(head->list) , list ){
 
@@ -134,9 +126,6 @@ PAGE* read_node(BTREE* t , pgno_t x){
             }
             Mpool_put(mp,h,0);
         }
-#ifdef NODE_DEBUG
-        err_debug(("~~$"));
-#endif
 
         // construct the actual node of the page
 #ifdef NODE_DEBUG
@@ -145,7 +134,7 @@ PAGE* read_node(BTREE* t , pgno_t x){
         h = init_node_mem(t,x,entry->flags);
         __rebuild_node(h,&logCollector);
 #ifdef NODE_DEBUG
-        err_debug(("~~$"));
+        err_debug(("~~$End Rebuild"));
 #endif
         __log_free(&logCollector);
         return h;
@@ -198,8 +187,8 @@ void addkey2node( PAGE* h, void* b_entry, indx_t skip){
     DBT* key;
     DBT* data;
 
-    err_debug(("uig")); 
-    disk_entry_dump(b_entry, h->flags);
+    //err_debug(("addkey2node")); 
+    //disk_entry_dump(b_entry, h->flags);
 
     if(h->flags & P_BINTERNAL){
         bi = (BINTERNAL*)b_entry;
@@ -385,3 +374,4 @@ int Mpool_put( MPOOL *mp, void *page, u_int flags)
     }
     return mpool_put( mp, page, flags);
 }
+
