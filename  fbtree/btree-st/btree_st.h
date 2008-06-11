@@ -94,24 +94,31 @@ typedef struct _BLOG{
  * Note: p should be the destination to insert. It can also used to copy a BLOG to another BLOG (i.e. p=BLOG)
  */
 #define	WR_BLOG(p, blog) {				\
-	*(u_int32_t *)p = blog->ksize;			\
-    p += sizeof(u_int32_t);						\
-	*(pgno_t *)p = blog->nodeID;			\
-	p += sizeof(pgno_t);					\
-	*(pgno_t *)p = (blog->flags & LOG_INTERNAL) ? blog->u_pgno : blog->u_dsize ;   \
-	p += sizeof(pgno_t);						\
-	*(pgno_t *)p = blog->seqnum;			\
-	p += sizeof(u_int32_t);						\
-	*(pgno_t *)p = blog->logVersion;		\
-	p += sizeof(u_int32_t);						\
-	*(u_char *)p = blog->flags;						\
-	p += sizeof(u_char);						\
-    strncpy((char*)p, blog->bytes, blog->ksize);    \
+	*(u_int32_t *)p = blog->ksize;		\
+    p += sizeof(u_int32_t);				\
+	*(pgno_t *)p = blog->nodeID;		\
+	p += sizeof(pgno_t);				\
+    if(blog->flags & LOG_LEAF){         \
+        *(u_int32_t*)p = blog->u_dsize; \
+        p+=sizeof(u_int32_t);           \
+    }else{ \
+        *(u_int32_t*)p = blog->u_pgno; \
+        p+=sizeof(pgno_t);           \
+    } \
+	*(pgno_t *)p = blog->seqnum;		\
+	p += sizeof(u_int32_t);				\
+	*(pgno_t *)p = blog->logVersion;	\
+	p += sizeof(u_int32_t);				\
+	*(u_char *)p = blog->flags;			\
+	p += sizeof(u_char);				\
+    memmove((char*)p, blog->bytes, blog->ksize);    \
     p+=blog->ksize; \
-    if( (blog->flags & LOG_LEAF)) strncpy((char*)p, blog->bytes+blog->ksize , blog->u_dsize);    \
+    if( (blog->flags & LOG_LEAF)) { \
+        memmove((char*)p, blog->bytes+blog->ksize , blog->u_dsize);    \
+    } \
 }
 //not euqle. why? 
-//strncpy((char*)p, blog->bytes, blog->ksize + ((blog->flags & LOG_INTERNAL) ? 0 : blog->u_dsize) );    
+//memmove((char*)p, blog->bytes, blog->ksize + ((blog->flags & LOG_INTERNAL) ? 0 : blog->u_dsize) );    
 void log_dump(BLOG* log);
 
 void disk_entry_dump(void* entry, u_int32_t flags);

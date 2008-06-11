@@ -19,12 +19,20 @@ void append_log(PAGE* p , BLOG* blog){
 
     assert(p!=NULL);
 
+    
     nbytes = NBLOG(blog);
+
     index = NEXTINDEX(p);
     p->lower += sizeof(indx_t);
     p->linp[index] = p->upper-=nbytes;
     dest = (char*)p + p->upper;
+
+    //err_debug(("before append log")); 
+    //log_dump(blog);
+    
+    /* XXX It always has problem ? */
     WR_BLOG(dest, blog);
+
     //err_debug(("append log")); 
     //log_dump((BLOG*)((char*)p+p->upper ));
 
@@ -225,8 +233,8 @@ pgno_t logpool_put(BTREE* t ,BLOG* blog){
         // ??? after sync, the page still be pinned?
         logbuf->pgno  = pgno_logbuf;
         logbuf->prevpg = logbuf->nextpg = P_INVALID;
-	      logbuf->lower = BTDATAOFF;
-	      logbuf->upper = t->bt_psize;
+	    logbuf->lower = BTDATAOFF;
+	    logbuf->upper = t->bt_psize;
         //logbuf->flags = P_LOG;
 
     }
