@@ -275,7 +275,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
             else if(mode & P_LOG){
                 entry =  NTT_get(h->pgno);
                 bi_log = disk2log_bi((BINTERNAL*)((char *)h + h->linp[skip]), h->pgno, entry->maxSeq++, entry->logVersion);
-                //log_dump(bi_log);
                 logpool_put(t,bi_log);
             }
 			break;

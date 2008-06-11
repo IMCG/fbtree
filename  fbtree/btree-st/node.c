@@ -294,7 +294,7 @@ PAGE* init_node_mem(BTREE* t, pgno_t nid, u_char flags ){
 	h->lower  = BTDATAOFF;
 	h->upper  = t->bt_psize;
     h->flags = flags | P_MEM;
-
+    assert(h->flags & P_MEM);
     return h;
 }
 
