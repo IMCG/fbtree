@@ -37,7 +37,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 	int cmp;
 
 	BT_CLR(t);  /* @mx it initializes t->bt_sp  */
-    err_debug1("Searh Btree");
+    err_debug(("Searh Btree"));
 	for (pg = P_ROOT;;) {
         err_debug(("~^"));
         err_debug(("Read Node %ud",pg));
@@ -54,7 +54,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 			if ((cmp = __bt_cmp(t, key, &t->bt_cur)) == 0) {
 				if (h->flags & P_BLEAF) {
 					*exactp = 1;
-                    err_debug1("End Search\n");
+                    err_debug(("End Search"));
 					return (&t->bt_cur);
 				}
 				goto next;
@@ -80,17 +80,17 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 				if (base == 0 &&
 				    h->prevpg != P_INVALID &&
 				    __bt_sprev(t, h, key, exactp))
-                    err_debug1("End Search\n");
+                    err_debug(("End Search"));
 					return (&t->bt_cur);
 				if (base == NEXTINDEX(h) &&
 				    h->nextpg != P_INVALID &&
 				    __bt_snext(t, h, key, exactp))
-                    err_debug1("End Search\n");
+                    err_debug(("End Search\n"));
 					return (&t->bt_cur);
 			}
 			*exactp = 0;
 			t->bt_cur.index = base;
-            err_debug1("End Search\n");
+            err_debug(("End Search"));
 			return (&t->bt_cur);
 		}
 
