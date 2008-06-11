@@ -49,8 +49,6 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 
 	if ((e = __bt_search_st(t, key, &exact)) == NULL)
 		return (RET_ERROR);
-    // e->page maybe a virtual node, it will no need to use mpool
-    // TODO: how to deal with the virtual node
 	if (!exact) {
         Mpool_put(t->bt_mp, e->page, 0);
         return (RET_SPECIAL);

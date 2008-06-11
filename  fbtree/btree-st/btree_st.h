@@ -38,6 +38,7 @@ NTTEntry* NTT_get(pgno_t pgno);
 //u_int32_t NTT_getMaxSeq(pgno_t pgno);
 void NTT_add(pgno_t nid, PAGE* pg);
 void NTT_add_pgno(pgno_t nodeID, pgno_t pgno);
+void NTT_del_list(NTTEntry* entry);
 void NTT_dump();
 /* ----
  * = Section 2. Log Entry =
@@ -117,7 +118,8 @@ void disk_entry_dump(void* entry, u_int32_t flags);
 
 void append_log(PAGE* p , BLOG* blog);
 BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
-BLOG* disk2log_bl(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
+BLOG* disk2log_bl(BLEAF* bl, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
+BLOG* disk2log_bl_dbt(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
 void* log2disk( BLOG* blog);
 /* ----
  * = Section 3. Log Buffer =

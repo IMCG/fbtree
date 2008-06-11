@@ -73,7 +73,7 @@ void testBT(){
         //NTT_dump();
         
         rk=i/2+1;
-        //rk=428;
+        //rk=40;
         rkey.size=4;
         rkey.data=(void*)&rk;
         rdata.size=0;

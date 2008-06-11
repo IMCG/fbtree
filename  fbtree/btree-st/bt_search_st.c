@@ -73,7 +73,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
 		 * while there are matches on other pages.  If at the start or
 		 * end of a page, check the adjacent page.
          *
-         * TODO: what about this condition?
+         * TODO: what about this condition for log mode ?
 		 */
 		if (h->flags & P_BLEAF) {
 			if (!F_ISSET(t, B_NODUPS)) {

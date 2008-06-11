@@ -105,10 +105,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 * skip set to the offset which should be used.  Additionally, l and r
 	 * are pinned.
 	 */
-#ifdef BT_SPLIT_DEBUG
-    err_debug0("~^"); 
-    err_debug(("Split LEAF PAGE %u",sp->pgno));
-#endif
     /* h is page to insert data */
 	h = sp->pgno == P_ROOT ?
 	    bt_root(t, sp, &l, &r, &skip, ilen) :
@@ -116,9 +112,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	if (h == NULL)
 		return (RET_ERROR);
 
-#ifdef BT_SPLIT_DEBUG
-    err_debug1(("~$End Split"));
-#endif
 	/* ----
      * = Step 2. insert new key/data pair into leaf =
      * ----
@@ -126,10 +119,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 * always cause a leaf page to split first.)
      * XXX: we needn't add log here since leaf is always disk mode, do it later! 
      */
-#ifdef BT_SPLIT_DEBUG
-    err_debug0("~^"); 
-    err_debug(("Insert new (key,data) into the leaf page %u",h->pgno));
-#endif
 	h->linp[skip] = h->upper -= ilen;
 	dest = (char *)h + h->upper;
 	WR_BLEAF(dest, key, data, flags)
@@ -142,15 +131,11 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		goto err2;
 
     if(sp->pgno == P_ROOT){
-#ifdef BT_SPLIT_DEBUG
-        err_debug1(("~^Fix root"));
-#endif
         genLogFromNode(t,sp);
     }
-#ifdef BT_SPLIT_DEBUG
-    err_debug1(("~$End Fix"));
-#endif
-	/* ----
+	
+    /**
+     * ----
      * = Step 3. update parent node's pointer or split parent node if necessary =
      * ----
      * {{{
@@ -189,9 +174,11 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
          * ----
          */
 		/* Get the parent page. */
-		if ((h = mpool_get(t->bt_mp, parent->pgno, 0)) == NULL)
-            goto err2;
+		//if ((h = mpool_get(t->bt_mp, parent->pgno, 0)) == NULL)
+        //    goto err2;
 
+        h = read_node(t,parent->pgno);
+        assert(h!=NULL);
         /*
          * The new key goes ONE AFTER the index, because the split
 		 * was to the right.
@@ -288,7 +275,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
             else if(mode & P_LOG){
                 entry =  NTT_get(h->pgno);
                 bi_log = disk2log_bi((BINTERNAL*)((char *)h + h->linp[skip]), h->pgno, entry->maxSeq++, entry->logVersion);
-                log_dump(bi_log);
+                //log_dump(bi_log);
                 logpool_put(t,bi_log);
             }
 			break;
@@ -436,6 +423,7 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
      * @mx tp = 'l' OR 'r'
 	 */
     //XXX assume all internal node 
+    
 	tp = bt_psplit(t, h, l, r, skip, ilen);
 
 	/* Move the new left page onto the old left page. */
@@ -486,7 +474,8 @@ bt_root(t, h, lp, rp, skip, ilen)
 	++bt_split;
 	++bt_rootsplit;
 #endif
-	/* Put the new left and right pager s for the split into place. */
+    
+    /* Put the new left and right pager s for the split into place. */
 	if ((l = new_node(t, &lnpg, h->flags & P_TYPE)) == NULL ||
 	    (r = new_node(t, &rnpg, h->flags & P_TYPE)) == NULL)
 		return (NULL);
@@ -496,10 +485,19 @@ bt_root(t, h, lp, rp, skip, ilen)
 	/* Split the root page. */
 	tp = bt_psplit(t, h, l, r, skip, ilen);
 
+
 	*lp = l;
 	*rp = r;
-    //genLogFromNode(t,l);
-    //genLogFromNode(t,r);
+	if (tp == l){
+        if(t->bt_mode & P_LOG)
+            genLogFromNode(t,r);
+    }
+    else{  /* tp==r  */
+        assert(tp==r);
+        if(t->bt_mode & P_LOG)
+            genLogFromNode(t,l);
+    }
+
 	return (tp);
 }
 
@@ -559,6 +557,8 @@ bt_broot(t, h, l, r)
         err_debug(("Change root into (INTERNAL|LOG)"));
 #endif
         entry->flags = P_BINTERNAL | P_LOG;
+        /* FIXME: delete list */
+        NTT_del_list(entry);
 
 		/*
 		 * If the key is on an overflow page, mark the overflow chain
@@ -621,6 +621,7 @@ bt_psplit(t, h, l, r, pskip, ilen)
 	indx_t full, half, nxt, off, skip, top, used;
 	u_int32_t nbytes;
 	int bigkeycnt, isbigkey;
+
 
 	/*
 	 * Split the data to the left and right pages.  Leave the skip index
