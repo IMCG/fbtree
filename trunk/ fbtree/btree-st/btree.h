@@ -87,8 +87,6 @@ typedef struct _page {
 #define	P_BLEAF		0x02		/* leaf page */
 
 #define	P_OVERFLOW	0x04		/* overflow page */
-#define	P_RINTERNAL	0x08		/* recno internal page */
-#define	P_RLEAF		0x10		/* leaf page */
 #define P_TYPE		0x1f		/* type mask */
 
 #define	P_PRESERVE	0x20		/* never delete this chain of pages */
@@ -164,30 +162,6 @@ typedef struct _binternal {
 	p += sizeof(u_char);						\
 }
 
-/*
- * For the recno internal pages, the item is a page number with the number of
- * keys found on that page and below.
- */
-typedef struct _rinternal {
-	recno_t	nrecs;			/* number of records */
-	pgno_t	pgno;			/* page number stored below */
-} RINTERNAL;
-
-/* Get the page's RINTERNAL structure at index indx. */
-#define	GETRINTERNAL(pg, indx)						\
-	((RINTERNAL *)((char *)(pg) + (pg)->linp[indx]))
-
-/* Get the number of bytes in the entry. */
-#define NRINTERNAL							\
-	LALIGN(sizeof(recno_t) + sizeof(pgno_t))
-
-/* Copy a RINTERAL entry to the page. */
-#define	WR_RINTERNAL(p, nrecs, pgno) {					\
-	*(recno_t *)p = nrecs;						\
-	p += sizeof(recno_t);						\
-	*(pgno_t *)p = pgno;						\
-}
-
 /* For the btree leaf pages, the item is a key and data pair. */
 typedef struct _bleaf {
 	u_int32_t	ksize;		/* size of key */
@@ -221,32 +195,6 @@ typedef struct _bleaf {
 	memmove(p, data->data, data->size);				\
 }
 
-/* For the recno leaf pages, the item is a data entry. */
-typedef struct _rleaf {
-	u_int32_t	dsize;		/* size of data */
-	u_char	flags;			/* P_BIGDATA */
-	char	bytes[1];
-} RLEAF;
-
-/* Get the page's RLEAF structure at index indx. */
-#define	GETRLEAF(pg, indx)						\
-	((RLEAF *)((char *)(pg) + (pg)->linp[indx]))
-
-/* Get the number of bytes in the entry. */
-#define NRLEAF(p)	NRLEAFDBT((p)->dsize)
-
-/* Get the number of bytes from the user's data. */
-#define	NRLEAFDBT(dsize)						\
-	LALIGN(sizeof(u_int32_t) + sizeof(u_char) + (dsize))
-
-/* Copy a RLEAF entry to the page. */
-#define	WR_RLEAF(p, data, flags) {					\
-	*(u_int32_t *)p = data->size;					\
-	p += sizeof(u_int32_t);						\
-	*(u_char *)p = flags;						\
-	p += sizeof(u_char);						\
-	memmove(p, data->data, data->size);				\
-}
 
 /*
  * A record in the tree is either a pointer to a page and an index in the page
@@ -361,20 +309,6 @@ typedef struct _btree {
 	int	(*bt_cmp) __P((const DBT *, const DBT *));
 					/* B: prefix comparison function */
 	size_t	(*bt_pfx) __P((const DBT *, const DBT *));
-					/* R: recno input function */
-	int	(*bt_irec) __P((struct _btree *, recno_t));
-
-	FILE	 *bt_rfp;		/* R: record FILE pointer */
-	int	  bt_rfd;		/* R: record file descriptor */
-
-	caddr_t	  bt_cmap;		/* R: current point in mapped space */
-	caddr_t	  bt_smap;		/* R: start of mapped space */
-	caddr_t   bt_emap;		/* R: end of mapped space */
-	size_t	  bt_msize;		/* R: size of mapped region. */
-
-	recno_t	  bt_nrecs;		/* R: number of records */
-	size_t	  bt_reclen;		/* R: fixed record length */
-	u_char	  bt_bval;		/* R: delimiting byte/pad character */
 
 /*
  * NB:

@@ -67,8 +67,6 @@ __bt_dump(dbp)
 	(void)fprintf(stderr, "%s: pgsz %d",
 	    F_ISSET(t, B_INMEM) ? "memory" : "disk", t->bt_psize);
 
-	if (F_ISSET(t, R_RECNO))
-		(void)fprintf(stderr, " keys %lu", t->bt_nrecs);
 #undef X
 #define	X(flag, name) \
 	if (F_ISSET(t, flag)) { \
@@ -111,7 +109,6 @@ __bt_dmpage(h)
 	(void)fprintf(stderr, "version %lu\n", m->version);
 	(void)fprintf(stderr, "psize %lu\n", m->psize);
 	(void)fprintf(stderr, "free %lu\n", m->free);
-	(void)fprintf(stderr, "nrecs %lu\n", m->nrecs);
 	(void)fprintf(stderr, "flags %lu", m->flags);
 #undef X
 #define	X(flag, name) \
@@ -187,8 +184,6 @@ __bt_dpage(h)
 {
 	BINTERNAL *bi;
 	BLEAF *bl;
-	RINTERNAL *ri;
-	RLEAF *rl;
 	indx_t cur, top;
 	char *sep;
 
@@ -202,8 +197,6 @@ __bt_dpage(h)
 	sep = "";
 	X(P_BINTERNAL,	"BINTERNAL")		/* types */
 	X(P_BLEAF,	"BLEAF")
-	X(P_RINTERNAL,	"RINTERNAL")		/* types */
-	X(P_RLEAF,	"RLEAF")
 	X(P_OVERFLOW,	"OVERFLOW")
 	X(P_PRESERVE,	"PRESERVE");
 	(void)fprintf(stderr, ")\n");
@@ -281,12 +274,10 @@ __bt_stat(dbp)
 	for (i = P_ROOT; (h = mpool_get(t->bt_mp, i, 0)) != NULL; ++i) {
 		switch (h->flags & P_TYPE) {
 		case P_BINTERNAL:
-		case P_RINTERNAL:
 			++pinternal;
 			ifree += h->upper - h->lower;
 			break;
 		case P_BLEAF:
-		case P_RLEAF:
 			++pleaf;
 			lfree += h->upper - h->lower;
 			nkeys += NEXTINDEX(h);
@@ -301,22 +292,18 @@ __bt_stat(dbp)
 	/* Count the levels of the tree. */
 	for (i = P_ROOT, levels = 0 ;; ++levels) {
 		h = mpool_get(t->bt_mp, i, 0);
-		if (h->flags & (P_BLEAF|P_RLEAF)) {
+		if (h->flags & (P_BLEAF)) {
 			if (levels == 0)
 				levels = 1;
 			(void)Mpool_put(t->bt_mp, h, 0);
 			break;
 		}
-		i = F_ISSET(t, R_RECNO) ?
-		    GETRINTERNAL(h, 0)->pgno :
-		    GETBINTERNAL(h, 0)->pgno;
+		i = GETBINTERNAL(h, 0)->pgno;
 		(void)Mpool_put(t->bt_mp, h, 0);
 	}
 
 	(void)fprintf(stderr, "%d level%s with %ld keys",
 	    levels, levels == 1 ? "" : "s", nkeys);
-	if (F_ISSET(t, R_RECNO))
-		(void)fprintf(stderr, " (%ld header count)", t->bt_nrecs);
 	(void)fprintf(stderr,
 	    "\n%lu pages (leaf %ld, internal %ld, overflow %ld)\n",
 	    pinternal + pleaf + pcont, pleaf, pinternal, pcont);

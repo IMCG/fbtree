@@ -610,7 +610,6 @@ bt_psplit(t, h, l, r, pskip, ilen)
 	BINTERNAL *bi;
 	BLEAF *bl;
 	CURSOR *c;
-	RLEAF *rl;
 	PAGE *rval;
 	void *src;
 	indx_t full, half, nxt, off, skip, top, used;
@@ -730,14 +729,6 @@ bt_psplit(t, h, l, r, pskip, ilen)
 			src = bl = GETBLEAF(h, nxt);
 			nbytes = NBLEAF(bl);
 			break;
-		case P_RINTERNAL:
-			src = GETRINTERNAL(h, nxt);
-			nbytes = NRINTERNAL;
-			break;
-		case P_RLEAF:
-			src = rl = GETRLEAF(h, nxt);
-			nbytes = NRLEAF(rl);
-			break;
 		default:
 			abort();
 		}
@@ -783,28 +774,3 @@ bt_preserve(t, pg)
 	return (RET_SUCCESS);
 }
 
-/*
- * REC_TOTAL -- Return the number of recno entries below a page.
- *
- * Parameters:
- *	h:	page
- *
- * Returns:
- *	The number of recno entries below a page.
- *
- * XXX
- * These values could be set by the bt_psplit routine.  The problem is that the
- * entry has to be popped off of the stack etc. or the values have to be passed
- * all the way back to bt_split/bt_rroot and it's not very clean.
- */
-static recno_t
-rec_total(h)
-	PAGE *h;
-{
-	recno_t recs;
-	indx_t nxt, top;
-
-	for (recs = 0, nxt = 0, top = NEXTINDEX(h); nxt < top; ++nxt)
-		recs += GETRINTERNAL(h, nxt)->nrecs;
-	return (recs);
-}

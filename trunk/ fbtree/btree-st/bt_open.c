@@ -170,7 +170,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
      *      t->bt_pfx = NULL;
      */
 	t->bt_pfx = b.prefix;
-	t->bt_rfd = -1;
 
 	if ((t->bt_dbp = dbp = (DB *)malloc(sizeof(DB))) == NULL)
 		goto err;
@@ -246,7 +245,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 			M_32_SWAP(m.version);
 			M_32_SWAP(m.psize);
 			M_32_SWAP(m.free);
-			M_32_SWAP(m.nrecs);
 			M_32_SWAP(m.flags);
 		}
 		if (m.magic != BTREEMAGIC || m.version != BTREEVERSION)
@@ -259,7 +257,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 		b.psize = m.psize;
 		F_SET(t, m.flags);
 		t->bt_free = m.free;
-		t->bt_nrecs = m.nrecs;
 	} else {
 		/*
 		 * Set the page size to the best value for I/O to this file.
@@ -283,7 +280,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 			F_SET(t, B_NODUPS);
 
 		t->bt_free = P_INVALID;
-		t->bt_nrecs = 0;
 		F_SET(t, B_METADIRTY);
 	}
 
