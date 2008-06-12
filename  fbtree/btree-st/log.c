@@ -33,8 +33,8 @@ void append_log(PAGE* p , BLOG* blog){
     /* XXX It always has problem ? */
     WR_BLOG(dest, blog);
 
-    //err_debug(("append log")); 
-    //log_dump((BLOG*)((char*)p+p->upper ));
+    err_debug(("append log")); 
+    log_dump((BLOG*)((char*)p+p->upper ));
 
 }
 /**
@@ -221,7 +221,7 @@ pgno_t logpool_put(BTREE* t ,BLOG* blog){
 	if (logbuf->upper - logbuf->lower < nbytes + sizeof(indx_t)) {
 
 #ifdef LOG_DEBUG    
-        err_debug1("flush the full log buffer");
+        err_debug(("flush the full log buffer"));
 #endif 
 
         //FIXME tmp design, it should be pinned first, though it is actually

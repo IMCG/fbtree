@@ -42,7 +42,6 @@ void NTT_add(pgno_t nid, PAGE* pg){
     const char * err_loc = "(NTT_add) in 'NTT.c'";
     NTTEntry* entry;
 
-    //err_debug(("nid = %d\n", nid));
     entry = NTT_get(nid);
     
     /* XXX free NTT's Sector List */
