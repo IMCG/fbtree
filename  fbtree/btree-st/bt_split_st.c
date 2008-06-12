@@ -559,14 +559,7 @@ bt_broot(t, h, l, r)
         entry->flags = P_BINTERNAL | P_LOG;
         NTT_del_list(entry);
 
-		/*
-		 * If the key is on an overflow page, mark the overflow chain
-		 * so it isn't deleted when the leaf copy of the key is deleted.
-		 */
-		if (bl->flags & P_BIGKEY &&
-		    bt_preserve(t, *(pgno_t *)bl->bytes) == RET_ERROR)
-			return (RET_ERROR);
-		break;
+        assert(!(bl->flags & P_BIGKEY));
 	case P_BINTERNAL:
 		bi = GETBINTERNAL(r, 0);
 		nbytes = NBINTERNAL(bi->ksize);

@@ -31,14 +31,8 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 
 	/* Toss any page pinned across calls. */
 	if (t->bt_pinned != NULL) {
-#ifdef MPOOL_DEBUG
-        err_debug(("Toss any page pinned across calls")); 
-#endif  
 		Mpool_put(t->bt_mp, t->bt_pinned, 0);
 		t->bt_pinned = NULL;
-#ifdef MPOOL_DEBUG
-        err_debug(("End Toss\n")); 
-#endif  
 	}
 
 	/* Get currently doesn't take any flags. */
