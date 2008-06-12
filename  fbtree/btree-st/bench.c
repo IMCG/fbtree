@@ -67,7 +67,6 @@ void testInsert(){
 
 	for (i=0; i<config.BTrecordnum;i++) {
         rd=0;
-	  printf("insert record %d\n",i+1);
 	  fscanf(fp,"%lld",&ibuf);
 
       key.size = 8;
@@ -75,7 +74,7 @@ void testInsert(){
       data.size = 8;
       sqlite3Randomness(data.size, data.data);
 	  
-      err_debug1("= BEGIN PUT (%d,%d) =", *(int*)key.data,*(int*)data.data);
+      //err_debug1("= BEGIN PUT (%d,%d) =", *(int*)key.data,*(int*)data.data);
       
       start_timer();
 	  rc = dbp->put(dbp, &key, &data, R_NOOVERWRITE);
@@ -85,7 +84,7 @@ void testInsert(){
         if(rc!=RET_SUCCESS){
             err_quit("db put error");
         }
-        
+#if 0        
         rkey.size=8;
         rkey.data=(void*)&ibuf;
         rdata.size=0;
@@ -102,7 +101,7 @@ void testInsert(){
         else{
             //err_debug1("not in the database");
         }
-
+#endif
     }
 
 	(void)dbp->close(dbp);

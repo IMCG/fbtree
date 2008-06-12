@@ -78,6 +78,7 @@ int	 __ovfl_put __P((BTREE *, const DBT *, pgno_t *));
 void	 __bt_dnpage __P((DB *, pgno_t));
 void	 __bt_dpage __P((PAGE *));
 void	 __bt_dump __P((DB *));
+void     __bt_dmeta(BTMETA *m);
 #endif
 #ifdef STATISTICS
 void	 __bt_stat __P((DB *));

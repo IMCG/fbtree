@@ -1,7 +1,7 @@
 #include "btree.h"
 #include "list.h"
 /*use an arry to implement NTT first*/
-#define NTT_MAXSIZE 256 
+#define NTT_MAXSIZE 102400 
 //static NTTEntry NTT[NTT_MAXSIZE];
 static NTTEntry NTT[NTT_MAXSIZE];
 
@@ -25,7 +25,7 @@ int NTT_init(){
  */
 NTTEntry* NTT_get(pgno_t pgno){
     //const char* err_loc = "function (NTT_get) in NTT.c";
-    //err_debug(("pgno = %ud\n", pgno));
+    //err_debug1("pgno = %u", pgno);
     assert( pgno > 0 && pgno<= NTT_MAXSIZE);
     
     return &NTT[pgno];
@@ -42,6 +42,7 @@ void NTT_add(pgno_t nid, PAGE* pg){
     const char * err_loc = "(NTT_add) in 'NTT.c'";
     NTTEntry* entry;
 
+    //err_debug(("nid = %d\n", nid));
     entry = NTT_get(nid);
     
     /* XXX free NTT's Sector List */
