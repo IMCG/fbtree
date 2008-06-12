@@ -66,6 +66,7 @@ __bt_dump(dbp)
 	t = dbp->internal;
 	(void)fprintf(stderr, "%s: pgsz %d",
 	    F_ISSET(t, B_INMEM) ? "memory" : "disk", t->bt_psize);
+
 	if (F_ISSET(t, R_RECNO))
 		(void)fprintf(stderr, " keys %lu", t->bt_nrecs);
 #undef X
@@ -106,6 +107,33 @@ __bt_dmpage(h)
 	char *sep;
 
 	m = (BTMETA *)h;
+	(void)fprintf(stderr, "magic %lx\n", m->magic);
+	(void)fprintf(stderr, "version %lu\n", m->version);
+	(void)fprintf(stderr, "psize %lu\n", m->psize);
+	(void)fprintf(stderr, "free %lu\n", m->free);
+	(void)fprintf(stderr, "nrecs %lu\n", m->nrecs);
+	(void)fprintf(stderr, "flags %lu", m->flags);
+#undef X
+#define	X(flag, name) \
+	if (m->flags & flag) { \
+		(void)fprintf(stderr, "%s%s", sep, name); \
+		sep = ", "; \
+	}
+	if (m->flags) {
+		sep = " (";
+		X(B_NODUPS,	"NODUPS");
+		X(R_RECNO,	"RECNO");
+		(void)fprintf(stderr, ")");
+	}
+}
+/*
+ * bt_dmeta - dump meta page
+ */
+void
+__bt_dmeta(BTMETA *m)
+{
+	char *sep;
+
 	(void)fprintf(stderr, "magic %lx\n", m->magic);
 	(void)fprintf(stderr, "version %lu\n", m->version);
 	(void)fprintf(stderr, "psize %lu\n", m->psize);

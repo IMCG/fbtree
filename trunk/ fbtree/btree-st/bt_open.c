@@ -92,7 +92,7 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	int flags, mode, dflags;
 	const BTREEINFO *openinfo;
 {
-	struct stat sb;
+    struct stat sb;
 	BTMETA m;
 	BTREE *t;
 	BTREEINFO b;
@@ -337,6 +337,7 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	if (dflags & DB_TXN)
 		F_SET(t, B_DB_TXN);
 
+    err_debug1("ncache = %d", ncache); 
 	return (dbp);
 
 einval:	errno = EINVAL;

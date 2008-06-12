@@ -22,7 +22,8 @@ typedef struct _NTTentry{
     u_int32_t   logVersion;
     u_int32_t   maxSeq;
     SectorList  list;
-/* The Same with defintion in PAGE
+/* 
+The Same with defintion in PAGE
 #define P_BINTERNAL   0x01
 #define P_BLEAF       0x02
 */

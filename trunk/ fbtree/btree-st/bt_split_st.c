@@ -556,7 +556,6 @@ bt_broot(t, h, l, r)
         err_debug(("Change root into (INTERNAL|LOG)"));
 #endif
         entry->flags = P_BINTERNAL | P_LOG;
-        /* FIXME: delete list */
         NTT_del_list(entry);
 
 		/*
