@@ -1,5 +1,6 @@
 #include	<errno.h>		/* for definition of errno */
 #include	<stdarg.h>		/* ANSI C header file */
+#include	"config.h"
 #include	"errhandle.h"
 
 static void	err_doit(int, const char *, va_list);
@@ -13,11 +14,13 @@ char	*pname = NULL;		/* caller can set this from argv[0] */
 void
 err_debug1(const char *fmt, ...)
 {
+#ifdef TEST_DEBUG
 	va_list		ap;
 
 	va_start(ap, fmt);
 	err_doit(0, fmt, ap);
 	va_end(ap);
+#endif
 	return;
 }
 /* err_debug0 - err_debug without a new line  

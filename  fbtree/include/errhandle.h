@@ -27,7 +27,7 @@ typedef	void	Sigfunc(int);	/* for signal handlers */
 #define	min(a,b)	((a) < (b) ? (a) : (b))
 #define	max(a,b)	((a) > (b) ? (a) : (b))
 
-#define	do_we_log_this(args) 0
+#define	do_we_log_this(args) (0)
 
 #define err_debug(args) do{ \
     if(do_we_log_this(__FILE__)){ \

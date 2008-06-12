@@ -173,7 +173,6 @@ bt_meta(t)
 	m.version = BTREEVERSION;
 	m.psize = t->bt_psize;
 	m.free = t->bt_free;
-	m.nrecs = t->bt_nrecs;
 	m.flags = F_ISSET(t, SAVEMETA);
 
 	memmove(p, &m, sizeof(BTMETA));
