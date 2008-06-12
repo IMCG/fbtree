@@ -130,9 +130,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	    bt_broot(t, sp, l, r) == RET_ERROR)
 		goto err2;
 
-    if(sp->pgno == P_ROOT){
-        genLogFromNode(t,sp);
-    }
+
 	
     /**
      * ----
@@ -173,11 +171,10 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
          * == Step 3.1. get the parent page and calculate the space needed on the parent page. ==
          * ----
          */
-		/* Get the parent page. */
-		//if ((h = mpool_get(t->bt_mp, parent->pgno, 0)) == NULL)
-        //    goto err2;
-
+        err_debug(("-^Update parent node %u", parent->pgno)); 
+        err_debug(("--^Read node %u", parent->pgno)); 
         h = read_node(t,parent->pgno);
+        err_debug(("--$End Read"));
         assert(h!=NULL);
         /*
          * The new key goes ONE AFTER the index, because the split
@@ -222,6 +219,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 
         /* === Case 1. Split the parent page === */
 		if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
+            err_debug(("split the parent page"));    
 			sp = h;
 			h = h->pgno == P_ROOT ?
 			    bt_root(t, h, &l, &r, &skip, nbytes) :
@@ -233,6 +231,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
         /* === Case 2. shift the indices. === */
         // XXX we just construct all the logs to make it simple first
         else {
+            err_debug(("shift the parent page"));    
             if (skip < (nxtindex = NEXTINDEX(h)))
                 memmove(h->linp + skip + 1, h->linp + skip,
                     (nxtindex - skip) * sizeof(indx_t));
@@ -291,6 +290,8 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 
 		Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
 		Mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
+
+        err_debug(("-^End update", parent->pgno)); 
 	}
 
 	/* Unpin the held pages. */
@@ -584,8 +585,11 @@ bt_broot(t, h, l, r)
 	/* Unpin the root page, set to btree internal page. */
 	h->flags &= ~P_TYPE;
 	h->flags |= P_BINTERNAL;
+    if(t->bt_mode == P_LOG){
+        assert(h->flags & P_MEM);
+        genLogFromNode(t,h);
+    }
 	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
-
 	return (RET_SUCCESS);
 }
 

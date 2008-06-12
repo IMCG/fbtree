@@ -129,7 +129,7 @@ PAGE* read_node(BTREE* t , pgno_t x){
 
         // construct the actual node of the page
 #ifdef NODE_DEBUG
-        err_debug(("~~^\nRebuild node"));
+        err_debug(("~~^Rebuild node"));
 #endif
         h = init_node_mem(t,x,entry->flags);
         __rebuild_node(h,&logCollector);
@@ -349,6 +349,7 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
 	h->upper = t->bt_psize;
 	h->flags |= flags;
     NTT_add(*nid,h);
+    err_debug(("new node %u",*nid)); 
     if(mode & P_DISK){
         NTT_add_pgno(*nid,*npg);
     }
