@@ -69,11 +69,7 @@ __bt_close(dbp)
 
 	t = dbp->internal;
 
-	/* Toss any page pinned across calls. */
-	if (t->bt_pinned != NULL) {
-		Mpool_put(t->bt_mp, t->bt_pinned, 0);
-		t->bt_pinned = NULL;
-	}
+    bt_tosspinned(t);
 
 	/* Sync the tree. */
 	if (__bt_sync(dbp, 0) == RET_ERROR)
@@ -124,12 +120,8 @@ __bt_sync(dbp, flags)
 	int status;
 
 	t = dbp->internal;
-
-	/* Toss any page pinned across calls. */
-	if (t->bt_pinned != NULL) {
-		Mpool_put(t->bt_mp, t->bt_pinned, 0);
-		t->bt_pinned = NULL;
-	}
+    
+    bt_tosspinned(t);
 
 	/* Sync doesn't currently take any flags. */
 	if (flags != 0) {

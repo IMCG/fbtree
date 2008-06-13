@@ -28,12 +28,8 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 	int exact, status;
 
 	t = dbp->internal;
-
-	/* Toss any page pinned across calls. */
-	if (t->bt_pinned != NULL) {
-		Mpool_put(t->bt_mp, t->bt_pinned, 0);
-		t->bt_pinned = NULL;
-	}
+    
+    bt_tosspinned(t);
 
 	/* Get currently doesn't take any flags. */
 	if (flags) {

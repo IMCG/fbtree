@@ -105,38 +105,11 @@ __bt_dmpage(h)
 	char *sep;
 
 	m = (BTMETA *)h;
-	(void)fprintf(stderr, "magic %lx\n", m->magic);
-	(void)fprintf(stderr, "version %lu\n", m->version);
-	(void)fprintf(stderr, "psize %lu\n", m->psize);
-	(void)fprintf(stderr, "free %lu\n", m->free);
-	(void)fprintf(stderr, "flags %lu", m->flags);
-#undef X
-#define	X(flag, name) \
-	if (m->flags & flag) { \
-		(void)fprintf(stderr, "%s%s", sep, name); \
-		sep = ", "; \
-	}
-	if (m->flags) {
-		sep = " (";
-		X(B_NODUPS,	"NODUPS");
-		X(R_RECNO,	"RECNO");
-		(void)fprintf(stderr, ")");
-	}
-}
-/*
- * bt_dmeta - dump meta page
- */
-void
-__bt_dmeta(BTMETA *m)
-{
-	char *sep;
-
-	(void)fprintf(stderr, "magic %lx\n", m->magic);
-	(void)fprintf(stderr, "version %lu\n", m->version);
-	(void)fprintf(stderr, "psize %lu\n", m->psize);
-	(void)fprintf(stderr, "free %lu\n", m->free);
-	(void)fprintf(stderr, "nrecs %lu\n", m->nrecs);
-	(void)fprintf(stderr, "flags %lu", m->flags);
+	(void)fprintf(stderr, "magic %x\n", m->magic);
+	(void)fprintf(stderr, "version %u\n", m->version);
+	(void)fprintf(stderr, "psize %u\n", m->psize);
+	(void)fprintf(stderr, "free %u\n", m->free);
+	(void)fprintf(stderr, "flags %u", m->flags);
 #undef X
 #define	X(flag, name) \
 	if (m->flags & flag) { \
@@ -228,14 +201,14 @@ __bt_dpage(h)
 			bl = GETBLEAF(h, cur);
 			if (bl->flags & P_BIGKEY)
 				(void)fprintf(stderr,
-				    "big key page %lu size %u/",
+				    "big key page %u size %u/",
 				    *(pgno_t *)bl->bytes,
 				    *(u_int32_t *)(bl->bytes + sizeof(pgno_t)));
 			else if (bl->ksize)
 				(void)fprintf(stderr, "%d/", *(int*)bl->bytes);
 			if (bl->flags & P_BIGDATA)
 				(void)fprintf(stderr,
-				    "big data page %lu size %u",
+				    "big data page %u size %u",
 				    *(pgno_t *)(bl->bytes + bl->ksize),
 				    *(u_int32_t *)(bl->bytes + bl->ksize +
 				    sizeof(pgno_t)));
@@ -305,7 +278,7 @@ __bt_stat(dbp)
 	(void)fprintf(stderr, "%d level%s with %ld keys",
 	    levels, levels == 1 ? "" : "s", nkeys);
 	(void)fprintf(stderr,
-	    "\n%lu pages (leaf %ld, internal %ld, overflow %ld)\n",
+	    "\n%u pages (leaf %u, internal %u, overflow %u)\n",
 	    pinternal + pleaf + pcont, pleaf, pinternal, pcont);
 	(void)fprintf(stderr, "%ld cache hits, %ld cache misses\n",
 	    bt_cache_hit, bt_cache_miss);

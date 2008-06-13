@@ -21,10 +21,10 @@ clean:
 	rm -f ${LIBDB} ${OBJ2} ${OBJ3} ${OBJ4} ${OBJ5} ${MISC}
 
 OORG=	-O
-CL=	${CC} -g -c \
-	-DLOG_DEBUG -DNODE_DEBUG -DNTT_DEBUG -DBT_PUT_DEBUG -DBT_SPLIT_DEBUG \
+CL=	${CC} -Wall -pg -g -c \
 	-D__DBINTERFACE_PRIVATE ${OORG} -I../include -I../linux/include -I../../include
 #-DNTT_DEBUG -DNODE_DEBUG -DBT_PUT_DEBUG -DBT_SPLIT_DEBUG\
+#-DLOG_DEBUG -DNODE_DEBUG -DNTT_DEBUG -DBT_PUT_DEBUG -DBT_SPLIT_DEBUG \
 
 bt_close.o: ../../btree-st/bt_close.c
 	${CL} -I../../btree-st ../../btree-st/bt_close.c

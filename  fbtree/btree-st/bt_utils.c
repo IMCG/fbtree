@@ -224,29 +224,21 @@ __bt_defcmp(a, b)
 	return ((int)a->size - (int)b->size);
 }
 
-/*
- * __BT_DEFPFX -- Default prefix routine.
- *
- * Parameters:
- *	a:	DBT #1
- *	b: 	DBT #2
- *
- * Returns:
- *	Number of bytes needed to distinguish b from a.
- */
-size_t
-__bt_defpfx(a, b)
-	const DBT *a, *b;
+/* Mpool_put - the same with Mpool_put except that it will check wheter page is just P_MEM first */
+int Mpool_put( MPOOL *mp, void *page, u_int flags)
 {
-	register u_char *p1, *p2;
-	register size_t cnt, len;
 
-	cnt = 1;
-	len = MIN(a->size, b->size);
-	for (p1 = a->data, p2 = b->data; len--; ++p1, ++p2, ++cnt)
-		if (*p1 != *p2)
-			return (cnt);
+    if( ((PAGE*)page)->flags &  P_MEM ){
+	    return (RET_SUCCESS);
+    }
+    return mpool_put( mp, page, flags);
+}
 
-	/* a->size must be <= b->size, or they wouldn't be in this order. */
-	return (a->size < b->size ? a->size + 1 : a->size);
+/* Toss any page pinned across calls. */
+void bt_tosspinned(BTREE* t){
+	if (t->bt_pinned != NULL) {
+		Mpool_put(t->bt_mp, t->bt_pinned, 0);
+		t->bt_pinned = NULL;
+	}
+    return;
 }

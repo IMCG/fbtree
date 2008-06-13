@@ -12,7 +12,7 @@ static NTTEntry NTT[NTT_MAXSIZE];
  *
  * NOTE: NTT[0] is not used
  */
-int NTT_init(){
+void NTT_init(){
     int i;
     for(i=1; i<NTT_MAXSIZE; i++){
         NTT[i].flags = P_NOTUSED;
@@ -39,7 +39,6 @@ NTTEntry* NTT_get(pgno_t pgno){
  * For log mode node, we construct pg as an identifier of node
  */
 void NTT_add(pgno_t nid, PAGE* pg){
-    const char * err_loc = "(NTT_add) in 'NTT.c'";
     NTTEntry* entry;
 
     entry = NTT_get(nid);
@@ -84,15 +83,15 @@ void NTT_add_pgno(pgno_t nodeID, pgno_t pgno){
  * delete sector list of the NTTEntry *entry*, and reset NTT
  */
 void NTT_del_list(NTTEntry* entry){
-    SectorList *slist_entry, *tmp;
-    entry->logVersion = 0;
-    entry->maxSeq = 0;
 #if 0
+    SectorList *slist_entry, *tmp;
     list_for_each_entry_safe(slist_entry,tmp,&(entry->list.list),list){
        list_del(slist_entry);
        free(tmp);
     }
 #endif
+    entry->logVersion = 0;
+    entry->maxSeq = 0;
     INIT_LIST_HEAD(&(entry->list.list));
 }
 

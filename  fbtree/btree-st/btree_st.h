@@ -88,7 +88,7 @@ typedef struct _BLOG{
         *(u_int32_t*)p = blog->u_dsize; \
         p+=sizeof(u_int32_t);           \
     }else{ \
-        *(u_int32_t*)p = blog->u_pgno; \
+        *(pgno_t*)p = blog->u_pgno; \
         p+=sizeof(pgno_t);           \
     } \
 	*(pgno_t *)p = blog->seqnum;		\

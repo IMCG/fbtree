@@ -28,30 +28,19 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 {
     const char* err_loc = "(__bt_put_st) in 'bt_put_st.c'";
 	BTREE *t;
-	DBT tkey, tdata;
 	EPG *e;
 	PAGE *h;
 	indx_t index, nxtindex;
-	pgno_t pg;
 	u_int32_t nbytes;
 	int dflags, exact, status;
     u_int32_t mode; 
-	char *dest, db[NOVFLSIZE], kb[NOVFLSIZE];
-
+	char *dest;
+    
+    dflags = 0 ; //NO BIGKEY or BIGDATA
 	t = dbp->internal;
     mode = t->bt_mode;
 
-	/* Toss any page pinned across calls. */
-	if (t->bt_pinned != NULL) {
-#ifdef MPOOL_DEBUG
-        err_debug(("Toss any page pinned across calls")); 
-#endif  
-		Mpool_put(t->bt_mp, t->bt_pinned, 0);
-		t->bt_pinned = NULL;
-#ifdef MPOOL_DEBUG
-        err_debug(("End Toss\n")); 
-#endif  
-	}
+    bt_tosspinned(t);
 
 	/* Check for change to a read-only tree. */
 	if (F_ISSET(t, B_RDONLY)) {
@@ -78,9 +67,6 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
         }
 	h = e->page;
 	index = e->index;
-#ifdef BT_PUT_DEBUG
-    err_debug(("index=%u :find index s.t. K(index) =< key < K(index+1) ",index));
-#endif
 	/* ----
      * = Step 2. Insert key/data into the tree =
      * ----
@@ -98,20 +84,6 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	default:
 		if (!exact || !F_ISSET(t, B_NODUPS))
 			break;
-#if 0
-//{{{
-		/*
-		 * !!!
-		 * Note, the delete may empty the page, so we need to put a
-		 * new entry into the page immediately.
-		 */
-delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
-			Mpool_put(t->bt_mp, h, 0);
-			return (RET_ERROR);
-		}
-		break;
-//}}}
-#endif
 	}
 
 	/* == Case 1. split if not enough room == 
@@ -158,7 +130,7 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
     }
 
     // if the insert position is the leftmost/rightmost, set them   
-	if (t->bt_order == NOT)
+	if (t->bt_order == NOT){
 		if (h->nextpg == P_INVALID){
 			if (index == NEXTINDEX(h) - 1) {
 				t->bt_order = FORWARD;
@@ -172,6 +144,7 @@ delete:		if (__bt_dleaf(t, key, h, index) == RET_ERROR) {
 				t->bt_last.pgno = h->pgno;
 			}
 		}
+    }
 
 	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 

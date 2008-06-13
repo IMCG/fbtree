@@ -11,19 +11,24 @@ typedef struct _loglist{
 }LogList;
 
 /*
- * Copy blog into the log list "logCollector"
+ * *Add* blog into the log list "logCollector"
  *
- * blog is cloned otherwise you have to held the whole page (which blog belongs to) in memory
+ * @copy: a bool variable to used to identify clone blog or keep page in memory
  *
- * XXX you should make a decision here, clone blog or keep page in memory
+ * If blog is cloned, you have to held the whole page (which blog belongs to) in memory
  */
-static void _log_collect( LogList* logCollector, BLOG* blog){
-    const char* err_loc ="(log_collect) in 'log.c'";
+static void _log_collect( LogList* logCollector, BLOG* blog, u_char copy){
+
     LogList* tmp = (LogList*)malloc(sizeof(LogList));
-    BLOG * bi = (BLOG*)malloc(NBLOG(blog));
-    char* dest = (char*)bi;
-    WR_BLOG(dest,blog);
-    tmp->log = bi;
+    if(!copy){
+        tmp->log = blog;
+    }
+    else{
+        BLOG * bi = (BLOG*)malloc(NBLOG(blog));
+        char* dest = (char*)bi;
+        WR_BLOG(dest,blog);
+        tmp->log = bi;
+    }
     list_add(&(tmp->list),&(logCollector->list));
 }
 /*
@@ -40,7 +45,6 @@ static void _log_free( LogList* logCollector){
  * Return PAGE lister of the new node.
  */
 static PAGE* _rebuild_node(PAGE* h, LogList* list){
-    pgno_t npg;
     LogList* entry;
     BLOG* log;
     const char* err_loc = "(_rebuild_node) in 'node.c'";
@@ -70,6 +74,25 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list){
     }
     return h;
 }
+/*
+ * new_node_mem - create a virtual node in memory with nid
+ *
+ * @t: btree
+ * @nid: node id
+ *
+ * @return new memory page
+ */
+static PAGE* new_node_mem(BTREE* t, pgno_t nid, u_char flags ){
+    PAGE* h = (PAGE*)malloc(t->bt_psize);
+    h->pgno = nid;
+	h->nextpg = P_INVALID;
+	h->prevpg = P_INVALID;
+	h->lower  = BTDATAOFF;
+	h->upper  = t->bt_psize;
+    h->flags = flags | P_MEM;
+    assert(h->flags & P_MEM);
+    return h;
+}
 
 
 /**
@@ -86,7 +109,6 @@ PAGE* read_node(BTREE* t , pgno_t x){
     const char* err_loc = "(read_node) in 'node.c'";
     PAGE *h=NULL;
     BLOG * blog=NULL;
-    pgno_t pg;
     LogList logCollector;
     int i;
 
@@ -99,7 +121,6 @@ PAGE* read_node(BTREE* t , pgno_t x){
     head = &(entry->list);
     if( entry->flags & P_DISK){
         h = mpool_get(mp,head->pgno,0);
-        return h;
     }
     else if(entry->flags & P_LOG){
         INIT_LIST_HEAD(&logCollector.list);
@@ -119,7 +140,7 @@ PAGE* read_node(BTREE* t , pgno_t x){
                 blog = GETBLOG(h,i);
                 // if it belongs to the node x , collect it
                 if( blog->nodeID==x && blog->logVersion==entry->logVersion){
-                    _log_collect(&logCollector,blog);
+                    _log_collect(&logCollector,blog,0);
                 }
             }
             Mpool_put(mp,h,0);
@@ -129,17 +150,18 @@ PAGE* read_node(BTREE* t , pgno_t x){
 #ifdef NODE_DEBUG
         err_debug(("~~^Rebuild node"));
 #endif
-        h = init_node_mem(t,x,entry->flags);
+        h = new_node_mem(t,x,entry->flags);
         _rebuild_node(h,&logCollector);
+        _log_free(&logCollector);
 #ifdef NODE_DEBUG
         err_debug(("~~$End Rebuild"));
 #endif
-        _log_free(&logCollector);
-        return h;
     }
     else{
         err_quit("unknown mode of node: %s",err_loc);
+        h = NULL;
     }
+    return h;
 
 }
 
@@ -177,7 +199,7 @@ void addkey2node_log(PAGE* h ,BLOG* blog){
 void addkey2node( PAGE* h, void* b_entry, indx_t skip){
     indx_t nxtindex;
     char * dest;
-	u_int32_t n, nbytes;
+	u_int32_t nbytes;
     BINTERNAL* bi=NULL;
     BLEAF* bl=NULL;
     assert(b_entry!=NULL);
@@ -239,8 +261,6 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
     BLEAF* bl;
     int cmp; /* result of compare */
 
-    const char err_loc[] = "(search_node) in 'node.c'";
-
     k1.size=ksize;
     k1.data=(char*)bytes;
     /* Do a binary search on the current page. */
@@ -278,25 +298,6 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
     return index;
 }
 
-/**
- * init_node_mem - create a virtual node in memory with nid
- *
- * @t: btree
- * @nid: node id
- *
- * @return new memory page
- */
-PAGE* init_node_mem(BTREE* t, pgno_t nid, u_char flags ){
-    PAGE* h = (PAGE*)malloc(t->bt_psize);
-    h->pgno = nid;
-	h->nextpg = P_INVALID;
-	h->prevpg = P_INVALID;
-	h->lower  = BTDATAOFF;
-	h->upper  = t->bt_psize;
-    h->flags = flags | P_MEM;
-    assert(h->flags & P_MEM);
-    return h;
-}
 
 /*
  * new_node -- Create a new node with assigned flags  
@@ -312,33 +313,34 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
 {
 	PAGE *h;
     u_char mode;
-    pgno_t* npg; // for set h->pgno = *npg
+    pgno_t npg; 
     mode = t->bt_mode;
 
+    npg = P_INVALID;
     *nid = new_node_id();
     if(mode & P_DISK){
         if (t->bt_free != P_INVALID &&
             (h = mpool_get(t->bt_mp, t->bt_free, 0)) != NULL) {
-            *npg = t->bt_free;
+            npg = t->bt_free;
             t->bt_free = h->nextpg;
 #ifdef MPOOL_DEBUG
-            err_debug(("new page %ud from the freelist",*npg));
+            err_debug(("new page %ud from the freelist",*pg));
 #endif
         }
         else{
-	        h= mpool_new(t->bt_mp, npg);
+	        h= mpool_new(t->bt_mp, &npg);
         }
         h->flags = 0x0;
     }
     else{
         assert( mode & P_LOG );
         h = (PAGE*)malloc(t->bt_psize);
-        *npg = *nid;
+        npg = *nid;
         h->flags = P_MEM; 
     }
 
     assert(h!=NULL);
-    h->pgno = *npg;
+    h->pgno = npg;
 	h->nextpg = P_INVALID;
 	h->prevpg = P_INVALID;
 	h->lower = BTDATAOFF;
@@ -347,7 +349,7 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
     NTT_add(*nid,h);
     err_debug(("new node %u",*nid)); 
     if(mode & P_DISK){
-        NTT_add_pgno(*nid,*npg);
+        NTT_add_pgno(*nid,npg);
     }
 	return (h);
 }
@@ -360,15 +362,4 @@ static pgno_t new_node_id(){
     return ++maxpg;
 }
 
-/**
- * Mpool_put - the same with Mpool_put except that it will check wheter page is just P_MEM first
- */
-int Mpool_put( MPOOL *mp, void *page, u_int flags)
-{
-
-    if( ((PAGE*)page)->flags &  P_MEM ){
-	    return (RET_SUCCESS);
-    }
-    return mpool_put( mp, page, flags);
-}
 
