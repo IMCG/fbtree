@@ -43,6 +43,7 @@
 #define	F_ISSET(p, f)	((p)->flags & (f))
 
 #include <sys/types.h>
+#include "config.h"
 #include "mpool.h"
 #include "errhandle.h"
 
@@ -52,7 +53,7 @@ typedef void * caddr_t;
 
 #define	DEFMINKEYPAGE	(2)		/* Minimum keys per page */
 #define	MINCACHE	(5)		/* Minimum cached pages */
-#define	MINPSIZE	(128)		/* Minimum page size */
+#define	MINPSIZE	(512)		/* Minimum page size */
 
 /*
  * Page 0 of a btree file contains a copy of the meta-data.  This page is also
@@ -338,5 +339,6 @@ typedef struct _btree {
 } BTREE;
 
 #include "btree_st.h"
+#include "extern.h"
 #include "extern_st.h"
 #endif
