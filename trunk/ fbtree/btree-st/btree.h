@@ -86,15 +86,17 @@ typedef struct _page {
  */
 #define	P_BINTERNAL	0x01		/* btree internal page */
 #define	P_BLEAF		0x02		/* leaf page */
-#define	P_OVERFLOW	0x04		/* overflow page */
-#define P_TYPE		0x1f		/* type mask */
-
-#define	P_PRESERVE	0x20		/* never delete this chain of pages */
 
 #define P_MEM       0x40        /* just a page in the memory, it is not mapped into a file */
 #define P_LOG        0x80
 #define P_DISK       0x100
+
 #define P_NOTUSED    0x200    /* flags are also used to check whether is it valid node */
+
+//TODO: The 3 macros below are not used. Remove later.    
+#define	P_OVERFLOW	0x04		/* overflow page */
+#define P_TYPE		0x1f		/* type mask */
+#define	P_PRESERVE	0x20		/* never delete this chain of pages */
 	u_int32_t flags;
 
 	indx_t	lower;			/* lower bound of free space on page */

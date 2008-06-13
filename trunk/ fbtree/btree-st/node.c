@@ -197,7 +197,6 @@ void addkey2node_log(PAGE* h ,BLOG* blog){
  *
  */
 void addkey2node( PAGE* h, void* b_entry, indx_t skip){
-    indx_t nxtindex;
     char * dest;
 	u_int32_t nbytes;
     BINTERNAL* bi=NULL;
@@ -218,15 +217,8 @@ void addkey2node( PAGE* h, void* b_entry, indx_t skip){
         bl = (BLEAF*)b_entry;
         nbytes = NBLEAF(bl) ;
     }
-    /* move to make room for the new (key,pointer) pair */
-    if (skip < (nxtindex = NEXTINDEX(h))){
-            memmove(h->linp + skip + 1, h->linp + skip,
-                (nxtindex - skip) * sizeof(indx_t));
-    }
-    /* insert key into the skip */
-    h->lower += sizeof(indx_t);
-    h->linp[skip] = h->upper -= nbytes;
-    dest = (char *)h + h->linp[skip];
+
+    dest = makeroom(h,skip,nbytes); 
 
     if(h->flags & P_BINTERNAL){ 
         WR_BINTERNAL(dest,bi->ksize,bi->pgno,0);
@@ -244,6 +236,45 @@ void addkey2node( PAGE* h, void* b_entry, indx_t skip){
     }
 }
 
+/*
+void addkey2node_bl_dbt(PAGE*h, DBT* key, DBT* data, indx_t skip){
+    indx_t nxtindex;
+    char * dest;
+	u_int32_t nbytes;
+    BINTERNAL* bi=NULL;
+    BLEAF* bl=NULL;
+    assert(b_entry!=NULL);
+
+    DBT* key;
+    DBT* data;
+
+
+}
+*/
+
+/** 
+ * makeroom - move from postion skip in the and make room for new entry
+ *
+ * @h: page
+ * @skip: postion to insert
+ * @nbytes: number of bytes of insert key/data 
+ *
+ * @return: pointer to the insert position of key/data
+ */
+char * makeroom(PAGE*h, indx_t skip, u_int32_t nbytes){
+    indx_t nxtindex;
+    char* dest;
+    /* move to make room for the new (key,pointer) pair */
+    if (skip < (nxtindex = NEXTINDEX(h))){
+            memmove(h->linp + skip + 1, h->linp + skip,
+                (nxtindex - skip) * sizeof(indx_t));
+    }
+    /* insert key into the skip */
+    h->lower += sizeof(indx_t);
+    h->linp[skip] = h->upper -= nbytes;
+    dest = (char *)h + h->linp[skip];
+    return dest;
+}
 
 /**
  * search_node - search the node h to find proper position to insert

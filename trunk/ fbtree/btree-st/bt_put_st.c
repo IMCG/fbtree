@@ -30,7 +30,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	BTREE *t;
 	EPG *e;
 	PAGE *h;
-	indx_t index, nxtindex;
+	indx_t index;
 	u_int32_t nbytes;
 	int dflags, exact, status;
     u_int32_t mode; 
@@ -58,7 +58,6 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	 * Find the key to delete, or, the location at which to insert.
 	 * Bt_fast and __bt_search both pin the returned page.
      *
-     * ??? bt_fast {FORWARD,BACK}
 	 */
 	if (t->bt_order == NOT || (e = bt_fast(t, key, data, &exact)) == NULL)
 		if ((e = __bt_search_st(t, key, &exact)) == NULL){
@@ -94,9 +93,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	 */
 	nbytes = NBLEAFDBT(key->size, data->size);
 	if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
-#ifdef BT_PUT_DEBUG
-    err_debug(("leaf room is not enough, split"));
-#endif
+        err_debug(("leaf room is not enough, split"));
 		if ((status = __bt_split_st(t, h, key,
 		    data, dflags, nbytes, index)) != RET_SUCCESS){
 			return (status);
@@ -107,17 +104,9 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
     /* == Case 2. directly insert if enough room == 
      * FIXME leaf is always in disk mode here
      */
-#ifdef BT_PUT_DEBUG
     err_debug(("leaf room is enough, insert"));
-#endif
-    if( mode & P_DISK){
-        if (index < (nxtindex = NEXTINDEX(h)))
-            memmove(h->linp + index + 1, h->linp + index,
-                (nxtindex - index) * sizeof(indx_t));
-        h->lower += sizeof(indx_t);
-
-        h->linp[index] = h->upper -= nbytes;
-        dest = (char *)h + h->upper;
+    if( h->flags & P_DISK){
+        dest = makeroom(h,index,nbytes);
         WR_BLEAF(dest, key, data, dflags);
     }
     else{
