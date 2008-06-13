@@ -19,8 +19,6 @@ BLOG* disk2log_bl_dbt(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_in
 void logpool_init(BTREE* t);
 pgno_t logpool_put(BTREE* t,BLOG* blog);
 
-
-
 /* Node Operation */
 PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags);
 PAGE* read_node(BTREE* mp , pgno_t x);

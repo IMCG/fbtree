@@ -1,6 +1,7 @@
 #include "btree.h"
 
 static pgno_t new_node_id();
+
 /*
  * log list to collect entries of a node
  */
@@ -16,7 +17,7 @@ typedef struct _loglist{
  *
  * XXX you should make a decision here, clone blog or keep page in memory
  */
-static void __log_collect( LogList* logCollector, BLOG* blog){
+static void _log_collect( LogList* logCollector, BLOG* blog){
     const char* err_loc ="(log_collect) in 'log.c'";
     LogList* tmp = (LogList*)malloc(sizeof(LogList));
     BLOG * bi = (BLOG*)malloc(NBLOG(blog));
@@ -28,7 +29,7 @@ static void __log_collect( LogList* logCollector, BLOG* blog){
 /*
  * Free the memory of log list
  */
-static void __log_free( LogList* logCollector){
+static void _log_free( LogList* logCollector){
 
 
 }
@@ -38,11 +39,11 @@ static void __log_free( LogList* logCollector){
  * It construct the node by apply the logs in order to 'h'.
  * Return PAGE lister of the new node.
  */
-static PAGE* __rebuild_node(PAGE* h, LogList* list){
+static PAGE* _rebuild_node(PAGE* h, LogList* list){
     pgno_t npg;
     LogList* entry;
     BLOG* log;
-    const char* err_loc = "(__rebuild_node) in 'node.c'";
+    const char* err_loc = "(_rebuild_node) in 'node.c'";
 
 #ifdef NODE_DEBUG
     err_debug(("rebuild node %d", h->pgno));
@@ -63,10 +64,8 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
         else if(log->flags & DELETE_KEY){
             /* TODO NO DELETE_KEY YET */
             err_quit("no delete key yet: %s",err_loc);
-        }
-        else if(log->flags & UPDATE_POINTER){
-            /* ??? no UPDATE_POINTER seems strange */
-
+        }else{
+            err_quit("unkown operation: %s",err_loc);
         }
     }
     return h;
@@ -84,10 +83,10 @@ static PAGE* __rebuild_node(PAGE* h, LogList* list){
  * Otherwise, it's in log mode, collect all logs then rebuild the node.
  */
 PAGE* read_node(BTREE* t , pgno_t x){
-    const char* err_loc = "(read_node)";
+    const char* err_loc = "(read_node) in 'node.c'";
     PAGE *h=NULL;
-    pgno_t pg;
     BLOG * blog=NULL;
+    pgno_t pg;
     LogList logCollector;
     int i;
 
@@ -100,7 +99,6 @@ PAGE* read_node(BTREE* t , pgno_t x){
     head = &(entry->list);
     if( entry->flags & P_DISK){
         h = mpool_get(mp,head->pgno,0);
-        //h = mpool_get(mp,x,0);
         return h;
     }
     else if(entry->flags & P_LOG){
@@ -121,7 +119,7 @@ PAGE* read_node(BTREE* t , pgno_t x){
                 blog = GETBLOG(h,i);
                 // if it belongs to the node x , collect it
                 if( blog->nodeID==x && blog->logVersion==entry->logVersion){
-                    __log_collect(&logCollector,blog);
+                    _log_collect(&logCollector,blog);
                 }
             }
             Mpool_put(mp,h,0);
@@ -132,11 +130,11 @@ PAGE* read_node(BTREE* t , pgno_t x){
         err_debug(("~~^Rebuild node"));
 #endif
         h = init_node_mem(t,x,entry->flags);
-        __rebuild_node(h,&logCollector);
+        _rebuild_node(h,&logCollector);
 #ifdef NODE_DEBUG
         err_debug(("~~$End Rebuild"));
 #endif
-        __log_free(&logCollector);
+        _log_free(&logCollector);
         return h;
     }
     else{
@@ -249,9 +247,11 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
     for (base = 0, lim = NEXTINDEX(h); lim; lim >>= 1) {
         index = base + (lim >> 1);
         /* FIXME: WORKED here? the behavior is different from __bt_cmp in bt_util.c  */
-	    //if (index == 0 && h->prevpg == P_INVALID && !(h->flags & P_BLEAF)){
-		//    cmp = 1;
-        //}
+#if 0
+        if (index == 0 && h->prevpg == P_INVALID && !(h->flags & P_BLEAF)){
+		    cmp = 1;
+        }
+#endif
         if(h->flags & P_BINTERNAL){
             bi=GETBINTERNAL(h,index);
             k2.data = bi->bytes;
@@ -336,11 +336,7 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
         *npg = *nid;
         h->flags = P_MEM; 
     }
-    /* @mx 
-     * In the original version, the function don't initialize h.
-     * IMHO, it's not a good design, since some initial value can be default
-     * Here we set it. It won't affect other code either since they'll reset it
-     */
+
     assert(h!=NULL);
     h->pgno = *npg;
 	h->nextpg = P_INVALID;
