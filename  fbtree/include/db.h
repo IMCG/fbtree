@@ -37,7 +37,7 @@
 #define	_DB_H_
 
 //#define	DB_DEF_IOSIZE	(8 * 1024)
-#define	DB_DEF_IOSIZE	(128)
+#define	DB_DEF_IOSIZE	(512)
 
 #ifndef __DBINTERFACE_PRIVATE
 	#define __DBINTERFACE_PRIVATE
