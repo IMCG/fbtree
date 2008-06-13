@@ -30,6 +30,9 @@ void addkey2node( PAGE* h, void* bi, indx_t skip);
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
 
 void genLogFromNode(BTREE* t, PAGE* pg);
+
+char * makeroom(PAGE*h, indx_t skip, u_int32_t nbytes);
+
 /* Other Operation */
 int Mpool_put( MPOOL *mp, void *page, u_int flags);
 void bt_tosspinned(BTREE* t);
