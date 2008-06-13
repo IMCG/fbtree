@@ -22,14 +22,6 @@ typedef struct _NTTentry{
     u_int32_t   logVersion;
     u_int32_t   maxSeq;
     SectorList  list;
-/* 
-The Same with defintion in PAGE
-#define P_BINTERNAL   0x01
-#define P_BLEAF       0x02
-*/
-#define P_LOG        0x80
-#define P_DISK       0x100
-#define P_NOTUSED    0x200    /* flags are also used to check whether is it valid node */
     u_int32_t        flags;        /* Note: clear P_NOTUSED when set others!!! */
 }NTTEntry;
 
