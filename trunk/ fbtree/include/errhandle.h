@@ -2,7 +2,7 @@
 
 #ifndef	__ourhdr_h
 #define	__ourhdr_h
-
+#include    "config.h"
 #include	<sys/types.h>	/* required for some of our prototypes */
 #include	<stdio.h>		/* for convenience */
 #include	<stdlib.h>		/* for convenience */
@@ -27,14 +27,17 @@ typedef	void	Sigfunc(int);	/* for signal handlers */
 #define	min(a,b)	((a) < (b) ? (a) : (b))
 #define	max(a,b)	((a) > (b) ? (a) : (b))
 
+#ifdef TEST_DEBUG
 #define	do_we_log_this(args) (0)
-
 #define err_debug(args) do{ \
     if(do_we_log_this(__FILE__)){ \
         const char* name = strrchr(__FILE__,'/'); \
         err_debug0("%s:%d:\t", name ? name+1 : __FILE__, __LINE__); \
         err_debug1 args ; \
     }}while(0);
+#else
+#define err_debug(args) ((void)(0))
+#endif
 
 void	err_debug0(const char *, ...);
 void	err_debug1(const char *, ...);

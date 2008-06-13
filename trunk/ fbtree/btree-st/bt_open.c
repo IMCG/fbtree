@@ -58,8 +58,8 @@ static char sccsid[] = "@(#)bt_open.c	8.10 (Berkeley) 8/17/94";
 #include <string.h>
 #include <unistd.h>
 
-
 #include "btree.h"
+
 extern int mkstemp(char * path);
 #ifdef DEBUG
 #undef	MINPSIZE
@@ -101,6 +101,7 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	ssize_t nr;
 	int machine_lorder;
 
+    b.prefix=NULL;
 	t = NULL;
 
 	/*
@@ -138,8 +139,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 		/* If no comparison, use default comparison and prefix. */
 		if (b.compare == NULL) {
 			b.compare = __bt_defcmp;
-			if (b.prefix == NULL)
-				b.prefix = __bt_defpfx;
 		}
 
 		if (b.lorder == 0)
@@ -150,7 +149,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 		b.flags = 0;
 		b.lorder = machine_lorder;
 		b.minkeypage = DEFMINKEYPAGE;
-		b.prefix = __bt_defpfx;
 		b.psize = 0;
 	}
 
@@ -443,11 +441,7 @@ __bt_fd(dbp)
 
 	t = dbp->internal;
 
-	/* Toss any page pinned across calls. */
-	if (t->bt_pinned != NULL) {
-		Mpool_put(t->bt_mp, t->bt_pinned, 0);
-		t->bt_pinned = NULL;
-	}
+    bt_tosspinned(t);
 
 	/* In-memory database can't have a file descriptor. */
 	if (F_ISSET(t, B_INMEM)) {

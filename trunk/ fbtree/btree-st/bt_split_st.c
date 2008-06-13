@@ -56,8 +56,6 @@ static PAGE	*bt_psplit
 		    __P((BTREE *, PAGE *, PAGE *, PAGE *, indx_t *, size_t));
 static PAGE	*bt_root
 		    __P((BTREE *, PAGE *, PAGE **, PAGE **, indx_t *, size_t));
-static int	 bt_rroot __P((BTREE *, PAGE *, PAGE *, PAGE *));
-static recno_t	 rec_total __P((PAGE *));
 
 #ifdef STATISTICS
 u_long	bt_rootsplit, bt_split, bt_sortsplit, bt_pfxsaved;
@@ -81,16 +79,14 @@ u_long	bt_rootsplit, bt_split, bt_sortsplit, bt_pfxsaved;
 int
 __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, size_t ilen, u_int32_t argskip)
 {
-    const char* err_loc = "(__bt_split_st) in 'bt_split_st.c'";
-	BINTERNAL *bi;
-	BLOG *bi_log;
-	BLEAF *bl, *tbl;
-	DBT a, b;
+	BINTERNAL *bi=NULL;
+	BLEAF *bl=NULL;
+	BLOG *bi_log=NULL;
 	EPGNO *parent;
 	PAGE *h, *l, *r, *lchild, *rchild;
 	indx_t nxtindex;
 	u_int16_t skip;
-	u_int32_t n, nbytes, nksize;
+	u_int32_t nbytes, nksize;
 	int parentsplit;
 	char *dest;
     u_char mode = t->bt_mode; /* mode of current node */
@@ -607,11 +603,11 @@ bt_psplit(t, h, l, r, pskip, ilen)
 	indx_t *pskip;
 	size_t ilen;
 {
-	BINTERNAL *bi;
-	BLEAF *bl;
+	BINTERNAL *bi=NULL;
+	BLEAF *bl=NULL;
 	CURSOR *c;
 	PAGE *rval;
-	void *src;
+	void *src=NULL;
 	indx_t full, half, nxt, off, skip, top, used;
 	u_int32_t nbytes;
 	int bigkeycnt, isbigkey;

@@ -1,5 +1,6 @@
 /* NTT operation */
 NTTEntry* NTT_get(pgno_t pgno);
+void NTT_init();
 void NTT_add(pgno_t nid, PAGE* pg);
 void NTT_add_pgno(pgno_t nodeID, pgno_t pgno);
 void NTT_del_list(NTTEntry* entry);
@@ -13,7 +14,7 @@ void append_log(PAGE* p , BLOG* blog);
 void* log2disk( BLOG* blog);
 BLOG* disk2log_bi(BINTERNAL* bi, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
 BLOG* disk2log_bl(BLEAF* bl, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
-BLOG* disk2log_bl_dbt(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
+BLOG* disk2log_bl_dbt(const DBT* key, const DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion);
 
 /* Log Buffer Management */
 void logpool_init(BTREE* t);
@@ -27,8 +28,8 @@ void addkey2node_log(PAGE* h ,BLOG* blog);
 void addkey2node( PAGE* h, void* bi, indx_t skip);
 
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
-PAGE* init_node_mem(BTREE* t, pgno_t nid, u_char flags );
 
 void genLogFromNode(BTREE* t, PAGE* pg);
 /* Other Operation */
 int Mpool_put( MPOOL *mp, void *page, u_int flags);
+void bt_tosspinned(BTREE* t);

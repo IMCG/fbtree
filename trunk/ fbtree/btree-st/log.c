@@ -95,7 +95,7 @@ BLOG* disk2log_bl(BLEAF* bl, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersi
  *
  * TODO we only deal with ADD_KEY here
  */
-BLOG* disk2log_bl_dbt(DBT* key, DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
+BLOG* disk2log_bl_dbt(const DBT* key, const DBT* data, pgno_t nodeID, u_int32_t seqnum, u_int32_t logVersion){
     BLOG* blog = (BLOG*)malloc( NBLEAF_LOG_DBT(key->size,data->size) );
     blog->ksize = key->size;
     blog->u_dsize = data->size;
@@ -192,7 +192,6 @@ static PAGE* logbuf;
  * it should be empty
  */
 void logpool_init(BTREE* t){
-    const char* err_loc = "function (logpool_init) in 'log.c'";
     logbuf = NULL;
     pgno_logbuf = P_INVALID;
 
@@ -206,9 +205,7 @@ void logpool_init(BTREE* t){
  * XXX we only deal with BLOG currently
  */
 pgno_t logpool_put(BTREE* t ,BLOG* blog){
-    const char* err_loc = "(logpool_put) in 'log.c'";
     u_int32_t nbytes;
-    indx_t index;
     
     nbytes = NBLOG(blog);
     // first call
