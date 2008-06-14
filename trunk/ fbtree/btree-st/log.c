@@ -63,8 +63,8 @@ void logpool_init(BTREE* t){
 pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t pgno, u_int32_t op){
     u_int32_t nbytes;
     NTTEntry* entry;
+    char * dest;
 
-    assert(op & LOG_LEAF);
     assert(logbuf!=NULL);
 
     entry = NTT_get(nid);
@@ -80,12 +80,15 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t 
         logbuf->flags = P_LOG;
     }
 
+    dest = makeroom(logbuf,NEXTINDEX(logbuf),nbytes);
     if(op & LOG_LEAF){
         assert((op & LOG_LEAF) && (pgno==P_INVALID)); 
-        WR_BLOG_DBT_BL(logbuf,nid,key,data,entry->maxSeq+1,entry->logversion,op);
+        WR_BLOG_DBT_BL(dest,nid,key,data,entry->maxSeq+1,entry->logversion,op);
         entry->maxSeq++;
     }else{
         assert( (op & LOG_INTERNAL) && (data==NULL)); 
+        WR_BLOG_DBT_BI(dest,nid,key,pgno,entry->maxSeq+1,entry->logversion,op);
+        entry->maxSeq++;
     }
 
     NTT_add_pgno(nid,pgno_logbuf);
