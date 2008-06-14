@@ -160,7 +160,7 @@ __bt_dpage(h)
 	indx_t cur, top;
 	char *sep;
 
-	(void)fprintf(stderr, "    page %d: (", h->pgno);
+	(void)fprintf(stderr, "    node[%d]-page %d: (", h->nid, h->pgno);
 #undef X
 #define	X(flag, name) \
 	if (h->flags & flag) { \
@@ -172,6 +172,9 @@ __bt_dpage(h)
 	X(P_BLEAF,	"BLEAF")
 	X(P_OVERFLOW,	"OVERFLOW")
 	X(P_PRESERVE,	"PRESERVE");
+	X(P_LOG,	"P_LOG");
+	X(P_MEM,	"P_MEM");
+	X(P_DISK,	"P_DISK");
 	(void)fprintf(stderr, ")\n");
 #undef X
 

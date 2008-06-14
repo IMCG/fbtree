@@ -63,6 +63,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
         }
 	h = e->page;
 	index = e->index;
+    __bt_dpage(h);
 	/* ----
      * = Step 2. Insert key/data into the tree =
      * ----
