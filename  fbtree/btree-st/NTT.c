@@ -40,7 +40,7 @@ NTTEntry* NTT_get(pgno_t pgno){
  */
 void NTT_new(pgno_t nid, u_int32_t flags){
     NTTEntry* entry;
-
+    
     entry = NTT_get(nid);
     entry->flags = 0;
 
@@ -62,6 +62,8 @@ void NTT_new(pgno_t nid, u_int32_t flags){
     entry->logversion = 0;
     entry->maxSeq= 0;
     INIT_LIST_HEAD(&(NTT[nid].list.list));
+
+    err_debug(("new node[%d], flags=%x", nid, entry->flags)); 
 
 }
 
@@ -121,8 +123,7 @@ void NTT_dump( ){
         fprintf(stderr,"NTT[%ud]: ", i);
         fprintf(stderr," logversion = %ud, ", entry->logversion);
         fprintf(stderr," maxSeq = %ud, ", entry->maxSeq);
-        fprintf(stderr," flags = %s |", (entry->flags & P_LOG) ? "P_LOG": "P_DISK");
-        fprintf(stderr," %s, ", (entry->flags & P_BLEAF) ? "P_BLEAF": "P_BINTERNAL");
+        fprintf(stderr," flags = %0x, ", entry->flags);
 
         slist = & entry->list;
         fprintf(stderr,"slist = (");
