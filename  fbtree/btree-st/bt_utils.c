@@ -242,3 +242,32 @@ void bt_tosspinned(BTREE* t){
 	}
     return;
 }
+
+/* Is there enough room to insert data with nbytes */
+int is_enough_room(PAGE* h , u_int32_t nbytes){
+    return (h->upper - h->lower) >= (nbytes + sizeof(indx_t));
+}
+/** 
+ * makeroom - move from postion skip in the and make room for new entry
+ *
+ * @h: page
+ * @skip: postion to insert
+ * @nbytes: number of bytes of insert key/data 
+ *
+ * @return: pointer to the insert position of key/data
+ */
+char * makeroom(PAGE*h, indx_t skip, u_int32_t nbytes){
+    indx_t nxtindex;
+    char* dest;
+    /* move to make room for the new (key,pointer) pair */
+    if (skip < (nxtindex = NEXTINDEX(h))){
+            memmove(h->linp + skip + 1, h->linp + skip,
+                (nxtindex - skip) * sizeof(indx_t));
+    }
+    /* insert key into the skip */
+    h->lower += sizeof(indx_t);
+    h->linp[skip] = h->upper -= nbytes;
+    dest = (char *)h + h->linp[skip];
+    return dest;
+}
+

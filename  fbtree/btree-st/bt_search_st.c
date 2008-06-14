@@ -33,7 +33,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
      */
     PAGE *h;    /* h is a logical B-Tree node, either a disk mode node or a virtual node in memory construct by log */    
 	indx_t base, index, lim;
-	pgno_t pg;
+	pgno_t pg; //node id of the page
 	int cmp;
 
 	BT_CLR(t);  /* @mx it initializes t->bt_sp  */

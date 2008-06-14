@@ -316,7 +316,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	if (!F_ISSET(t, B_INMEM))
 		mpool_filter(t->bt_mp, __bt_pgin, __bt_pgout, t);
     
-	t->bt_mode = P_LOG;
     logpool_init(t);
     NTT_init(); 
     /* Create a root page if new tree. */

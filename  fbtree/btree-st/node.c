@@ -1,7 +1,5 @@
 #include "btree.h"
 
-static pgno_t new_node_id();
-
 /*
  * log list to collect entries of a node
  */
@@ -63,7 +61,12 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list){
         assert(!( (log->flags & P_BIGKEY) | (log->flags & P_BIGDATA)));
         if(log->flags & ADD_KEY){
             //log_dump(log);
-            addkey2node_log(h,log);
+            if(log->flags & LOG_LEAF){
+                node_addkey(t,h,key,data,P_INVALID,index,nbytes);
+            }else{
+                assert(log->flags & LOG_INTERNAL);
+                node_addkey(t,h,key,data,P_INVALID,index,nbytes);
+            }
         }
         else if(log->flags & DELETE_KEY){
             /* TODO NO DELETE_KEY YET */
@@ -139,7 +142,7 @@ PAGE* read_node(BTREE* t , pgno_t x){
                 // get the log entry
                 blog = GETBLOG(h,i);
                 // if it belongs to the node x , collect it
-                if( blog->nodeID==x && blog->logVersion==entry->logVersion){
+                if( blog->nodeID==x && blog->logversion==entry->logversion){
                     _log_collect(&logCollector,blog,0);
                 }
             }
@@ -164,116 +167,47 @@ PAGE* read_node(BTREE* t , pgno_t x){
     return h;
 
 }
-
-
 /**
- * addkey2node_log - Apply the internal log entry add to the *internel* node 'h'.
- *
- * @h: node to insert
- * @blog: log entry
- *
- * XXX We first construct a binternal entry from the log entry, it's not essential.
- * We should apply the log directly for efficiency.
- * NOTE: h is a virtual node in memory
+ * node_addkey - Add Key to  a node
+ * 
+ * @h: the node - ({P_MEM|P_DISK},{P_BINTERNAL|P_BLEAF})
+ * @key
+ * @data: NULL for BINTERNAL node
+ * @pgno: P_INVALID for BLEAF node
+ * @index: insert position
+ * @nbytes: number of bytes of insert key/data
+ * @flags: 
  */
-void addkey2node_log(PAGE* h ,BLOG* blog){
+void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
+                 indx_t index, u_int32_t nbytes)
+{
+    char * dest=NULL;
+    NTTEntry* entry=NULL;
+    BLOG* bl_log=NULL;
 
-    void* b_entry;
-    indx_t skip;
-
-    assert(blog !=NULL);
-    b_entry = log2disk(blog);
-    skip = search_node(h, blog->ksize, blog->bytes);
-    addkey2node(h,b_entry,skip); 
-    free(b_entry);
-}
-
-/**
- * addkey2node - Insert the key to the skip position of the node 'h' 
- *
- * @h: node to insert
- * @b_entry: BINTERNAL entry or BLEAF entry
- * @skip: insert position
- *
- */
-void addkey2node( PAGE* h, void* b_entry, indx_t skip){
-    char * dest;
-	u_int32_t nbytes;
-    BINTERNAL* bi=NULL;
-    BLEAF* bl=NULL;
-    assert(b_entry!=NULL);
-
-    DBT* key;
-    DBT* data;
-
-    //err_debug(("addkey2node")); 
-    //disk_entry_dump(b_entry, h->flags);
-
-    if(h->flags & P_BINTERNAL){
-        bi = (BINTERNAL*)b_entry;
-        nbytes = NBINTERNAL(bi->ksize) ;
+    if(h->flags & P_BLEAF){
+        assert(pgno==P_INVALID);
+        if( h->flags & P_DISK){
+            dest = makeroom(h,index,nbytes);
+            WR_BLEAF(dest, key, data, NULL);
+        }
+        else{
+            assert(h->flags & P_MEM);
+            logpool_put(t,h->nid,key,data,P_INVALID, ADD_KEY | LOG_LEAF );
+        }
     }else{
-        assert( (h->flags & P_BLEAF));
-        bl = (BLEAF*)b_entry;
-        nbytes = NBLEAF(bl) ;
+        assert(h->flags & P_BINTERNAL);
+        assert(data==NULL);
+        if( h->flags & P_DISK){
+            dest = makeroom(h,index,nbytes);
+            WR_BINTERNAL(dest, key, pgno, flags);
+        }
+        else{
+            assert(h->flags & P_MEM);
+            logpool_put(t,h->nid,key,data,pgno, ADD_KEY | LOG_INTERNAL );
+        }
     }
 
-    dest = makeroom(h,skip,nbytes); 
-
-    if(h->flags & P_BINTERNAL){ 
-        WR_BINTERNAL(dest,bi->ksize,bi->pgno,0);
-	    memmove(dest, bi->bytes, bi->ksize);
-    }
-    else{
-        DBT ta,tb;
-        key = &ta;
-        data = &tb;
-        key->size = bl->ksize; 
-        key->data = bl->bytes;
-        data->size = bl->dsize; 
-        data->data = bl->bytes + bl->ksize;
-	    WR_BLEAF(dest, key, data, 0);
-    }
-}
-
-/*
-void addkey2node_bl_dbt(PAGE*h, DBT* key, DBT* data, indx_t skip){
-    indx_t nxtindex;
-    char * dest;
-	u_int32_t nbytes;
-    BINTERNAL* bi=NULL;
-    BLEAF* bl=NULL;
-    assert(b_entry!=NULL);
-
-    DBT* key;
-    DBT* data;
-
-
-}
-*/
-
-/** 
- * makeroom - move from postion skip in the and make room for new entry
- *
- * @h: page
- * @skip: postion to insert
- * @nbytes: number of bytes of insert key/data 
- *
- * @return: pointer to the insert position of key/data
- */
-char * makeroom(PAGE*h, indx_t skip, u_int32_t nbytes){
-    indx_t nxtindex;
-    char* dest;
-    /* move to make room for the new (key,pointer) pair */
-    if (skip < (nxtindex = NEXTINDEX(h))){
-            memmove(h->linp + skip + 1, h->linp + skip,
-                (nxtindex - skip) * sizeof(indx_t));
-    }
-    /* insert key into the skip */
-    h->lower += sizeof(indx_t);
-    h->linp[skip] = h->upper -= nbytes;
-    dest = (char *)h + h->linp[skip];
-    return dest;
 }
 
 /**
@@ -330,8 +264,15 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
 }
 
 
+/**
+ * new_node_id - allocate a new node id
+ */
+static pgno_t new_node_id(){
+    static pgno_t maxpg = 0;
+    return ++maxpg;
+}
 /*
- * new_node -- Create a new node with assigned flags  
+ * new_node -- Create a new logical node with assigned flags  
  * 
  * @t:	tree
  * @nid: as a return value, the new node's node id
@@ -345,11 +286,10 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
 	PAGE *h;
     u_char mode;
     pgno_t npg; 
-    mode = t->bt_mode;
 
     npg = P_INVALID;
     *nid = new_node_id();
-    if(mode & P_DISK){
+    if(flags & P_DISK){
         if (t->bt_free != P_INVALID &&
             (h = mpool_get(t->bt_mp, t->bt_free, 0)) != NULL) {
             npg = t->bt_free;
@@ -361,10 +301,9 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
         else{
 	        h= mpool_new(t->bt_mp, &npg);
         }
-        h->flags = 0x0;
     }
     else{
-        assert( mode & P_LOG );
+        assert(flags & P_MEM);
         h = (PAGE*)malloc(t->bt_psize);
         npg = *nid;
         h->flags = P_MEM; 
@@ -372,25 +311,18 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
 
     assert(h!=NULL);
     h->pgno = npg;
-	h->nextpg = P_INVALID;
-	h->prevpg = P_INVALID;
+    h->nid = *nid;
+	h->nextpg = h->prevpg = P_INVALID;
 	h->lower = BTDATAOFF;
 	h->upper = t->bt_psize;
-	h->flags |= flags;
+    h->flags = flags;
     NTT_add(*nid,h);
     err_debug(("new node %u",*nid)); 
-    if(mode & P_DISK){
+    if(h->flags & P_DISK){
         NTT_add_pgno(*nid,npg);
     }
 	return (h);
 }
 
-/**
- * new_node_id - allocate a new node id
- */
-static pgno_t new_node_id(){
-    static pgno_t maxpg = 0;
-    return ++maxpg;
-}
 
 

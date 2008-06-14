@@ -86,8 +86,6 @@ PAGE *
 __bt_new( BTREE *t, pgno_t *npg)
 {
 	PAGE *h;
-    u_char mode;
-    mode = t->bt_mode;
 	if (t->bt_free != P_INVALID &&
 	    (h = mpool_get(t->bt_mp, t->bt_free, 0)) != NULL) {
 		*npg = t->bt_free;
@@ -106,7 +104,9 @@ __bt_new( BTREE *t, pgno_t *npg)
      */
     assert(h!=NULL);
     h->pgno = *npg;
+    h->prevpg = h->nextpg = P_INVALID;
 	h->lower = BTDATAOFF;
 	h->upper = t->bt_psize;
+
 	return (h);
 }
