@@ -16,7 +16,7 @@ void NTT_init(){
     int i;
     for(i=1; i<NTT_MAXSIZE; i++){
         NTT[i].flags = P_NOTUSED;
-        NTT[i].logVersion = 0;
+        NTT[i].logversion = 0;
     }
 }
 /**
@@ -46,7 +46,7 @@ void NTT_add(pgno_t nid, PAGE* pg){
     /* XXX check whether exist NTT's Sector List */
     entry->flags = pg->flags | P_LOG ;
 
-    entry->logVersion = 0;
+    entry->logversion = 0;
     entry->maxSeq= 0;
     INIT_LIST_HEAD(&(NTT[nid].list.list));
 
@@ -90,7 +90,7 @@ void NTT_del_list(NTTEntry* entry){
        free(tmp);
     }
 #endif
-    entry->logVersion = 0;
+    entry->logversion = 0;
     entry->maxSeq = 0;
     INIT_LIST_HEAD(&(entry->list.list));
 }
@@ -106,7 +106,7 @@ void NTT_dump( ){
         entry = NTT_get(i);
         if(entry->flags & P_NOTUSED) continue;
         fprintf(stderr,"NTT[%ud]: ", i);
-        fprintf(stderr," logVersion = %ud, ", entry->logVersion);
+        fprintf(stderr," logversion = %ud, ", entry->logversion);
         fprintf(stderr," maxSeq = %ud, ", entry->maxSeq);
         fprintf(stderr," flags = %s |", (entry->flags & P_LOG) ? "P_LOG": "P_DISK");
         fprintf(stderr," %s, ", (entry->flags & P_BLEAF) ? "P_BLEAF": "P_BINTERNAL");

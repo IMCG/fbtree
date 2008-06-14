@@ -19,7 +19,7 @@ typedef struct _sectorlist{
     struct list_head list;
 }SectorList;
 typedef struct _NTTentry{
-    u_int32_t   logVersion;
+    u_int32_t   logversion;
     u_int32_t   maxSeq;
     SectorList  list;
     u_int32_t        flags;        /* Note: clear P_NOTUSED when set others!!! */
@@ -42,7 +42,7 @@ typedef struct _BLOG{
 #define u_pgno log_u.u_pgno
 
     u_int32_t seqnum;       /* sequence number of log entry (to identify its order) */
-    u_int32_t logVersion;   /* log version used in log compaction */
+    u_int32_t logversion;   /* log version used in log compaction */
 /* P_BIGDATA,P_BIGKEY has been defined in BINTERNAL */
 #define ADD_KEY         0x04        /* log entry for add key */
 #define DELETE_KEY      0x08        /* log entry for delete key */
@@ -68,13 +68,47 @@ typedef struct _BLOG{
     LALIGN( NBLEAF(bl) +  sizeof(pgno_t) + 2*sizeof(u_int32_t))
 
 /* Get the number of bytes in the user's key/data pair. */
-#define NBLEAF_LOG_DBT(ksize, dsize)						\
+#define NBLOG_DBT(ksize, dsize)						\
 	LALIGN(sizeof(u_int32_t) + 2*sizeof(pgno_t) + 2*sizeof(u_int32_t) + sizeof(u_char) + \
 	    (ksize) + (dsize))
 
 /* Get the number of bytes in the disk mode entry by the log mode entry 'bi' */
 #define NB_DISK_FROM_LOG(blog)    \
     LALIGN( NBLOG(blog) -  sizeof(pgno_t) - 2*sizeof(u_int32_t))
+
+#define WR_BLOG_DBT_BI(p,nid,key,pgno,seqnum,logversion,flags) { \
+	*(u_int32_t *)p = key->size;		\
+    p += sizeof(u_int32_t);				\
+	*(pgno_t *)p = nid;		            \
+	p += sizeof(pgno_t);				\
+    *(u_int32_t*)p = pgno;     \
+    p+=sizeof(u_int32_t);               \
+	*(pgno_t *)p = seqnum;		\
+	p += sizeof(u_int32_t);				\
+	*(pgno_t *)p = logversion;	\
+	p += sizeof(u_int32_t);				\
+	*(u_char *)p = flags;			\
+	p += sizeof(u_char);				\
+    memmove((char*)p, key->data, key->size);    \
+}
+
+#define WR_BLOG_DBT_BL(p,nid,key,data,seqnum,logversion,flags) { \
+	*(u_int32_t *)p = key->size;		\
+    p += sizeof(u_int32_t);				\
+	*(pgno_t *)p = nid;		            \
+	p += sizeof(pgno_t);				\
+    *(u_int32_t*)p = data->size;     \
+    p+=sizeof(u_int32_t);               \
+	*(pgno_t *)p = seqnum;		\
+	p += sizeof(u_int32_t);				\
+	*(pgno_t *)p = logversion;	\
+	p += sizeof(u_int32_t);				\
+	*(u_char *)p = flags;			\
+	p += sizeof(u_char);				\
+    memmove((char*)p, key->data, key->size);    \
+    p+=key->size; \
+    memmove((char*)p, data->data, data->size);    \
+}
 
 /* Copy a BLOG entry to the page.
  * Note: p should be the destination to insert. It can also used to copy a BLOG to another BLOG (i.e. p=BLOG)
@@ -93,7 +127,7 @@ typedef struct _BLOG{
     } \
 	*(pgno_t *)p = blog->seqnum;		\
 	p += sizeof(u_int32_t);				\
-	*(pgno_t *)p = blog->logVersion;	\
+	*(pgno_t *)p = blog->logversion;	\
 	p += sizeof(u_int32_t);				\
 	*(u_char *)p = blog->flags;			\
 	p += sizeof(u_char);				\

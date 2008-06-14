@@ -74,6 +74,7 @@ typedef void * caddr_t;
  */
 typedef struct _page {
 	pgno_t	pgno;			/* this page's page number */
+	pgno_t	nid;			/* this page's node id, for log mode node, it's set to P_INVALID */
     /* @mx ??? why we need it */
 	pgno_t	prevpg;			/* left sibling */
 	pgno_t	nextpg;			/* right sibling */
@@ -158,7 +159,7 @@ typedef struct _binternal {
 	LALIGN(sizeof(u_int32_t) + sizeof(pgno_t) + sizeof(u_char) + (len))
 
 /* Copy a BINTERNAL entry to the page. */
-#define	WR_BINTERNAL(p, size, pgno, flags) {				\
+#define	WR_BINTERNAL_OLD(p, size, pgno, flags) {				\
 	*(u_int32_t *)p = size;						\
 	p += sizeof(u_int32_t);						\
 	*(pgno_t *)p = pgno;						\
@@ -166,6 +167,18 @@ typedef struct _binternal {
 	*(u_char *)p = flags;						\
 	p += sizeof(u_char);						\
 }
+/* Copy a BINTERNAL entry to the page. */
+#define	WR_BINTERNAL(p, key, pgno, flags) {				\
+	*(u_int32_t *)p = key->size;						\
+	p += sizeof(u_int32_t);						\
+	*(pgno_t *)p = pgno;						\
+	p += sizeof(pgno_t);						\
+	*(u_char *)p = flags;						\
+	p += sizeof(u_char);						\
+	*(u_char *)p = key->data;						\
+}
+
+
 
 /* For the btree leaf pages, the item is a key and data pair. */
 typedef struct _bleaf {
@@ -308,7 +321,6 @@ typedef struct _btree {
 					/* sorted order @mx XXX ? */
 	enum { NOT, BACK, FORWARD } bt_order;
 	EPGNO	  bt_last;		/* last insert */
-    u_char    bt_mode;         /* latest mode of node */ 
 
 					/* B: key comparison function */
 	int	(*bt_cmp) __P((const DBT *, const DBT *));

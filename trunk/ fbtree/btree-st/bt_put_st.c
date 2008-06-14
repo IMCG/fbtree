@@ -33,12 +33,9 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	indx_t index;
 	u_int32_t nbytes;
 	int dflags, exact, status;
-    u_int32_t mode; 
-	char *dest;
     
     dflags = 0 ; //NO BIGKEY or BIGDATA
 	t = dbp->internal;
-    mode = t->bt_mode;
 
     bt_tosspinned(t);
 
@@ -105,18 +102,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
      * FIXME leaf is always in disk mode here
      */
     err_debug(("leaf room is enough, insert"));
-    if( h->flags & P_DISK){
-        dest = makeroom(h,index,nbytes);
-        WR_BLEAF(dest, key, data, dflags);
-    }
-    else{
-        NTTEntry* entry;
-        BLOG* bl_log;
-        assert( (mode & P_LOG) && (h->flags & (P_MEM|P_BLEAF )) );
-        entry =  NTT_get(h->pgno);
-        bl_log = disk2log_bl_dbt(key, data, h->pgno, entry->maxSeq++, entry->logVersion);
-        logpool_put(t,bl_log);
-    }
+    node_addkey(t,h,key,data,P_INVALID,index,nbytes);
 
     // if the insert position is the leftmost/rightmost, set them   
 	if (t->bt_order == NOT){
