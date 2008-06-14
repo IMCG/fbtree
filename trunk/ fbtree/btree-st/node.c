@@ -109,7 +109,6 @@ static PAGE* new_node_mem(BTREE* t, pgno_t nid, u_char flags ){
 	h->lower  = BTDATAOFF;
 	h->upper  = t->bt_psize;
     h->flags = flags | P_MEM;
-    assert(h->flags & P_MEM);
     return h;
 }
 
@@ -124,7 +123,8 @@ static PAGE* new_node_mem(BTREE* t, pgno_t nid, u_char flags ){
  * If it's in disk mode, read it dorectly.
  * Otherwise, it's in log mode, collect all logs then rebuild the node.
  */
-PAGE* read_node(BTREE* t , pgno_t x){
+PAGE* read_node(BTREE* t , pgno_t x)
+{
     const char* err_loc = "(read_node) in 'node.c'";
     PAGE *h=NULL;
     BLOG * blog=NULL;
@@ -177,7 +177,7 @@ PAGE* read_node(BTREE* t , pgno_t x){
 #endif
     }
     else{
-        err_quit("node[%d], mode=%x: unkown mode: %s", x, entry->flags, err_loc);
+        err_quit("error: node[%d], flags=%x: unkown mode: %s", x, entry->flags, err_loc);
         h = NULL;
     }
     return h;
@@ -335,8 +335,8 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t type)
 	h->lower = BTDATAOFF;
 	h->upper = t->bt_psize;
     h->flags |= type;
-    NTT_new(*nid,h->flags);
     err_debug(("new node %u",*nid)); 
+    NTT_new(*nid,h->flags);
     if(h->flags & P_DISK){
         NTT_add_pgno(*nid,npg);
     }
