@@ -32,19 +32,32 @@ NTTEntry* NTT_get(pgno_t pgno){
 
 }
 /**
- * NTT_add - Add a new node[nid] to the NTT
+ * NTT_new - Add a new node[nid] to the NTT
  * @nid - node id
- * @pg - page header of the new node
+ * @flags - flags of the new node
  *
  * For log mode node, we construct pg as an identifier of node
  */
-void NTT_add(pgno_t nid, PAGE* pg){
+void NTT_new(pgno_t nid, u_int32_t flags){
     NTTEntry* entry;
 
     entry = NTT_get(nid);
+    entry->flags = 0;
 
     /* XXX check whether exist NTT's Sector List */
-    entry->flags = pg->flags | P_LOG ;
+    if(flags & P_DISK){
+        entry->flags |= P_DISK;
+    }else{
+        assert(flags & P_MEM);
+        entry->flags |= P_LOG ;
+    }
+
+    if(flags & P_BLEAF){
+        entry->flags |= P_BLEAF;
+    }else{
+        assert(flags & P_BINTERNAL);
+        entry->flags |= P_BINTERNAL;
+    }
 
     entry->logversion = 0;
     entry->maxSeq= 0;
