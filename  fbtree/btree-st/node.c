@@ -15,7 +15,8 @@ typedef struct _loglist{
  *
  * If blog is cloned, you have to held the whole page (which blog belongs to) in memory
  */
-static void _log_collect( LogList* logCollector, BLOG* blog, u_char copy){
+static void _log_collect( LogList* logCollector, BLOG* blog, u_char copy)
+{
 
     LogList* tmp = (LogList*)malloc(sizeof(LogList));
     if(!copy){
@@ -32,7 +33,8 @@ static void _log_collect( LogList* logCollector, BLOG* blog, u_char copy){
 /*
  * Free the memory of log list
  */
-static void _log_free( LogList* logCollector){
+static void _log_free( LogList* logCollector)
+{
 
 
 }
@@ -102,7 +104,8 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list)
  *
  * @return new memory page
  */
-static PAGE* new_node_mem(BTREE* t, pgno_t nid, u_char type ){
+static PAGE* new_node_mem(BTREE* t, pgno_t nid, u_char type )
+{
     PAGE* h = (PAGE*)malloc(t->bt_psize);
     h->nid  = nid;
     h->pgno = P_INVALID;
@@ -113,7 +116,6 @@ static PAGE* new_node_mem(BTREE* t, pgno_t nid, u_char type ){
     h->flags = type | P_MEM;
     return h;
 }
-
 
 /**
  * read_node - read Node[x] from mp
@@ -337,7 +339,6 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t type)
 	h->lower = BTDATAOFF;
 	h->upper = t->bt_psize;
     h->flags |= type;
-    err_debug(("new node %u",*nid)); 
     NTT_new(*nid,h->flags);
     if(h->flags & P_DISK){
         NTT_add_pgno(*nid,npg);
