@@ -59,7 +59,7 @@ void testBT(){
     //_bt_dump(dbp);
 	
     //NTT_dump();
-    for( i = 0 ; i<3000 ; i++){
+    for( i = 0 ; i<124; i++){
         err_debug1("----\ni=%d\n",i);
         k = (u_int32_t)i;
         d = (u_int32_t)i*i;
@@ -74,7 +74,7 @@ void testBT(){
         //NTT_dump();
         
         rk=i/2+1;
-        //rk=23;
+        rk=123;
         rkey.size=4;
         rkey.data=(void*)&rk;
         rdata.size=0;

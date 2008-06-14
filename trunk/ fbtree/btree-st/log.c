@@ -60,7 +60,8 @@ void logpool_init(BTREE* t){
  * @op: {LOG_LEAF,LOG_INTERNAL}|{ADD_KEY,DELETE_KEY}
  * @return: pgno of the entry
  */
-pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t pgno, u_int32_t op){
+pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t pgno, u_int32_t op)
+{
     u_int32_t nbytes;
     NTTEntry* entry;
     char * dest;
@@ -90,6 +91,7 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t 
         WR_BLOG_DBT_BI(dest,nid,key,pgno,entry->maxSeq+1,entry->logversion,op);
         entry->maxSeq++;
     }
+    //log_dump(GETBLOG(logbuf,NEXTINDEX(logbuf)-1));
 
     NTT_add_pgno(nid,pgno_logbuf);
     Mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
@@ -102,7 +104,8 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t 
  *
  * we convert the real node into a set of log entries
  */
-void genLogFromNode(BTREE* t, PAGE* pg){
+void genLogFromNode(BTREE* t, PAGE* pg)
+{
     unsigned int i;
     BINTERNAL* bi=NULL;
     BLEAF* bl=NULL;
@@ -115,7 +118,7 @@ void genLogFromNode(BTREE* t, PAGE* pg){
 
     e = NTT_get(pg->nid);
     e->logversion++;
-    if(pg->flags & P_BLEAF){
+    if(pg->flags & P_BINTERNAL){
         for (i=0; i<NEXTINDEX(pg); i++){
             bi = GETBINTERNAL(pg,i);
             assert(bi!=NULL);
@@ -124,6 +127,7 @@ void genLogFromNode(BTREE* t, PAGE* pg){
             npgno = logpool_put(t,pg->nid,&key,NULL, bi->pgno,ADD_KEY|LOG_INTERNAL);
         }
     }else{
+        assert(pg->flags & P_BLEAF);
         for (i=0; i<NEXTINDEX(pg); i++){
             bl = GETBLEAF(pg,i);
             assert(bl!=NULL);
