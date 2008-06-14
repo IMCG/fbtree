@@ -99,7 +99,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 * are pinned.
 	 */
     /* h is page to insert data */
-	h = sp->pgno == P_ROOT ?
+	h = sp->nid== P_ROOT ?
 	    bt_root(t, sp, &l, &r, &skip, ilen) :
 	    bt_page(t, sp, &l, &r, &skip, ilen);
 	if (h == NULL)
@@ -119,7 +119,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
         genLogFromNode(t,h); 
     }
 	/* If the root page was split, make it look right. */
-	if (sp->pgno == P_ROOT &&
+	if (sp->nid == P_ROOT &&
 	    bt_broot(t, sp, l, r) == RET_ERROR)
 		goto err2;
 
@@ -212,7 +212,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
             err_debug(("split the parent page"));    
 			sp = h;
-			h = h->pgno == P_ROOT ?
+			h = h->nid== P_ROOT ?
 			    bt_root(t, h, &l, &r, &skip, nbytes) :
 			    bt_page(t, h, &l, &r, &skip, nbytes);
 			if (h == NULL)
@@ -237,13 +237,13 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 			h->linp[skip] = h->upper -= nbytes;
 			dest = (char *)h + h->linp[skip];
 			memmove(dest, bi, nbytes);
-			((BINTERNAL *)dest)->pgno = rchild->pgno;
+			((BINTERNAL *)dest)->pgno = rchild->nid;
 			break;
 		case P_BLEAF:
 			h->linp[skip] = h->upper -= nbytes;
 			dest = (char *)h + h->linp[skip];
 			WR_BINTERNAL_OLD(dest, nksize ? nksize : bl->ksize,
-			    rchild->pgno, bl->flags & P_BIGKEY);
+			    rchild->nid, bl->flags & P_BIGKEY);
 			memmove(dest, bl->bytes, nksize ? nksize : bl->ksize);
 			if (bl->flags & P_BIGKEY &&
 			    bt_preserve(t, *(pgno_t *)bl->bytes) == RET_ERROR)
@@ -271,7 +271,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		}
 
 		/* If the root page was split, make it look right. */
-		if (sp->pgno == P_ROOT &&
+		if (sp->nid == P_ROOT &&
 		    bt_broot(t, sp, l, r) == RET_ERROR)
 			goto err1;
 
@@ -342,7 +342,7 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 	if ((r = new_node(t, &npg, h->flags & P_TYPE)) == NULL)
 		return (NULL);
 	r->nextpg = h->nextpg;
-	r->prevpg = h->pgno;
+	r->prevpg = h->nid;
 	/* ----
      * = Step 2. split node h =
      * ----
@@ -366,7 +366,7 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 #ifdef STATISTICS
 		++bt_sortsplit;
 #endif
-		h->nextpg = r->pgno;
+		h->nextpg = r->nid;
 		r->lower = BTDATAOFF + sizeof(indx_t);
 		*skip = 0;
 		*lp = h;
@@ -387,8 +387,9 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 #ifdef PURIFY
 	memset(l, 0xff, t->bt_psize);
 #endif
+	l->nid = h->nid;
 	l->pgno = h->pgno;
-	l->nextpg = r->pgno;
+	l->nextpg = r->nid;
 	l->prevpg = h->prevpg;
 	l->lower = BTDATAOFF;
 	l->upper = t->bt_psize;
@@ -400,7 +401,7 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 			/* XXX mpool_free(t->bt_mp, r->pgno); */
             return (NULL);
 		}
-		tp->prevpg = r->pgno;
+		tp->prevpg = r->nid;
 		Mpool_put(t->bt_mp, tp, MPOOL_DIRTY);
 	}
 
@@ -465,13 +466,12 @@ bt_root(t, h, lp, rp, skip, ilen)
 	++bt_split;
 	++bt_rootsplit;
 #endif
-    
     /* Put the new left and right pager s for the split into place. */
 	if ((l = new_node(t, &lnpg, h->flags & P_TYPE)) == NULL ||
 	    (r = new_node(t, &rnpg, h->flags & P_TYPE)) == NULL)
 		return (NULL);
-	l->nextpg = r->pgno;
-	r->prevpg = l->pgno;
+	l->nextpg = r->nid;
+	r->prevpg = l->nid;
 
 	/* Split the root page. */
 	tp = bt_psplit(t, h, l, r, skip, ilen);
@@ -518,7 +518,7 @@ bt_broot(t, h, l, r)
 	u_int32_t nbytes;
 	char *dest;
     NTTEntry* entry;
-    entry = NTT_get(h->pgno);
+    entry = NTT_get(h->nid);
 	/*
 	 * If the root page was a leaf page, change it into an internal page.
 	 * We copy the key we split on (but not the key's data, in the case of
@@ -532,7 +532,7 @@ bt_broot(t, h, l, r)
 	nbytes = NBINTERNAL(0);
 	h->linp[0] = h->upper = t->bt_psize - nbytes;
 	dest = (char *)h + h->upper;
-	WR_BINTERNAL_OLD(dest, 0, l->pgno, 0);
+	WR_BINTERNAL_OLD(dest, 0, l->nid, 0);
 
 	switch (h->flags & P_TYPE) {
 	case P_BLEAF:
@@ -540,7 +540,7 @@ bt_broot(t, h, l, r)
 		nbytes = NBINTERNAL(bl->ksize);
 		h->linp[1] = h->upper -= nbytes;
 		dest = (char *)h + h->upper;
-		WR_BINTERNAL_OLD(dest, bl->ksize, r->pgno, 0);
+		WR_BINTERNAL_OLD(dest, bl->ksize, r->nid, 0);
 		memmove(dest, bl->bytes, bl->ksize);
         /* XXX we suppose all the internal node is log mode */
         /* TODO: NTT sector list should be changed */
@@ -557,7 +557,7 @@ bt_broot(t, h, l, r)
 		h->linp[1] = h->upper -= nbytes;
 		dest = (char *)h + h->upper;
 		memmove(dest, bi, nbytes);
-		((BINTERNAL *)dest)->pgno = r->pgno;
+		((BINTERNAL *)dest)->pgno = r->nid;
 		break;
 	default:
 		abort();
