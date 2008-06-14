@@ -316,8 +316,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	if (!F_ISSET(t, B_INMEM))
 		mpool_filter(t->bt_mp, __bt_pgin, __bt_pgout, t);
     
-    logpool_init(t);
-    NTT_init(); 
     /* Create a root page if new tree. */
 	if (nroot(t) == RET_ERROR)
 		goto err;
@@ -330,6 +328,8 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	if (dflags & DB_TXN)
 		F_SET(t, B_DB_TXN);
 
+    logpool_init(t);
+    NTT_init(); 
     err_debug1("ncache = %d", ncache); 
 	return (dbp);
 
