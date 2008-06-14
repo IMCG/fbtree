@@ -177,7 +177,7 @@ PAGE* read_node(BTREE* t , pgno_t x){
 #endif
     }
     else{
-        err_quit("unknown mode of node: %s",err_loc);
+        err_quit("node[%d], mode=%x: unkown mode: %s", x, entry->flags, err_loc);
         h = NULL;
     }
     return h;
@@ -285,23 +285,25 @@ static pgno_t new_node_id(){
     static pgno_t maxpg = 0;
     return ++maxpg;
 }
-/*
+/**
  * new_node -- Create a new logical node with assigned flags  
  * 
  * @t:	tree
  * @nid: as a return value, the new node's node id
+ * @type: P_BINTERNAL | P_BLEAF
+ *
  * @return: pointer to a new node
  *
- * To replace __bt_new
- * NOTE it will add the new node to the NTT
+ * NOTE: it will add the new node to the NTT
  */
-PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
+PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t type)
 {
 	PAGE *h;
     pgno_t npg; 
 
     npg = P_INVALID;
     *nid = new_node_id();
+#if 0
     if(flags & P_DISK){
         if (t->bt_free != P_INVALID &&
             (h = mpool_get(t->bt_mp, t->bt_free, 0)) != NULL) {
@@ -316,11 +318,15 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
         }
     }
     else{
-        assert(flags & P_MEM);
+#endif
+        //assert(flags & P_MEM);
         h = (PAGE*)malloc(t->bt_psize);
+        if(h==NULL){
+            err_sys("can't malloc new node");
+        }
         npg = *nid;
         h->flags = P_MEM; 
-    }
+//    }
 
     assert(h!=NULL);
     h->pgno = npg;
@@ -328,8 +334,8 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
 	h->nextpg = h->prevpg = P_INVALID;
 	h->lower = BTDATAOFF;
 	h->upper = t->bt_psize;
-    h->flags = flags;
-    NTT_add(*nid,h);
+    h->flags |= type;
+    NTT_new(*nid,h->flags);
     err_debug(("new node %u",*nid)); 
     if(h->flags & P_DISK){
         NTT_add_pgno(*nid,npg);

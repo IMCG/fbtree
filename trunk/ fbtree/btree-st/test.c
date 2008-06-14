@@ -54,7 +54,7 @@ void testBT(){
     data.data=(void*)&d;
     
     if(!dbp){
-		err_quit("can't open file %s\n", config.BTdatfile);
+		err_quit("can't open database %s\n", config.BTdatfile);
 	}
     //_bt_dump(dbp);
 	

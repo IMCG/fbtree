@@ -364,23 +364,24 @@ nroot(t)
 {
 	PAGE *meta, *root;
 	pgno_t npg;
-
 	if ((meta = mpool_get(t->bt_mp, 0, 0)) != NULL) {
 		Mpool_put(t->bt_mp, meta, 0);
 		return (RET_SUCCESS);
 	}
+
 	if (errno != EINVAL)		/* It's OK to not exist. */
 		return (RET_ERROR);
 	errno = 0;
-
 	if ((meta = mpool_new(t->bt_mp, &npg)) == NULL)
 		return (RET_ERROR);
 
 	if ((root = new_node(t, &npg, P_BLEAF)) == NULL)
 		return (RET_ERROR);
 
-	if (root->pgno != P_ROOT)
+	if (root->nid != P_ROOT){
+        err_ret("error: root.nid = %u", root->nid);
 		return (RET_ERROR);
+    }
 	memset(meta, 0, t->bt_psize);
 	Mpool_put(t->bt_mp, meta, MPOOL_DIRTY);
 	Mpool_put(t->bt_mp, root, MPOOL_DIRTY);
