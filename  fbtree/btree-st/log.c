@@ -60,7 +60,7 @@ void logpool_init(BTREE* t){
  * @op: {LOG_LEAF,LOG_INTERNAL}|{ADD_KEY,DELETE_KEY}
  * @return: pgno of the entry
  */
-pgno_t logpool_put(BTREE* t, pgno_t nid, DBT* key, DBT* data, pgno_t pgno, u_int32_t op){
+pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t pgno, u_int32_t op){
     u_int32_t nbytes;
     NTTEntry* entry;
 

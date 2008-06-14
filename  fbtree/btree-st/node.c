@@ -45,6 +45,12 @@ static void _log_free( LogList* logCollector){
 static PAGE* _rebuild_node(PAGE* h, LogList* list){
     LogList* entry;
     BLOG* log;
+    DBT a,b;
+    DBT* key = &a;
+    DBT* data = &b;
+    u_int32_t nbytes;
+    indx_t index;
+    char * dest;
     const char* err_loc = "(_rebuild_node) in 'node.c'";
 
 #ifdef NODE_DEBUG
@@ -58,20 +64,30 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list){
     // apply the log entries to construc a node
     list_for_each_entry(entry,&(list->list),list){
         log = entry->log;
-        assert(!( (log->flags & P_BIGKEY) | (log->flags & P_BIGDATA)));
+        index = search_node(h,log->ksize,log->bytes);
+        //LOG ADD KEY
         if(log->flags & ADD_KEY){
-            //log_dump(log);
             if(log->flags & LOG_LEAF){
-                node_addkey(t,h,key,data,P_INVALID,index,nbytes);
+                nbytes = NBLEAFDBT(log->ksize,log->u_dsize); 
+                dest = makeroom(h,index,nbytes);
+                key->size = log->ksize;
+                key->data = log->bytes;
+                data->size = log->u_dsize;
+                data->data = log->bytes + log->ksize;
+                WR_BLEAF(dest, key, data, 0);
             }else{
                 assert(log->flags & LOG_INTERNAL);
-                node_addkey(t,h,key,data,P_INVALID,index,nbytes);
+                nbytes = NBINTERNAL(log->ksize);
+                dest = makeroom(h,index,nbytes);
+                key->size = log->ksize;
+                key->data = log->bytes;
+                WR_BINTERNAL(dest, key, log->u_pgno, 0);
             }
         }
         else if(log->flags & DELETE_KEY){
-            /* TODO NO DELETE_KEY YET */
             err_quit("no delete key yet: %s",err_loc);
-        }else{
+        }
+        else{
             err_quit("unkown operation: %s",err_loc);
         }
     }
@@ -182,14 +198,12 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
                  indx_t index, u_int32_t nbytes)
 {
     char * dest=NULL;
-    NTTEntry* entry=NULL;
-    BLOG* bl_log=NULL;
 
     if(h->flags & P_BLEAF){
         assert(pgno==P_INVALID);
         if( h->flags & P_DISK){
             dest = makeroom(h,index,nbytes);
-            WR_BLEAF(dest, key, data, NULL);
+            WR_BLEAF(dest, key, data, 0);
         }
         else{
             assert(h->flags & P_MEM);
@@ -200,7 +214,7 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
         assert(data==NULL);
         if( h->flags & P_DISK){
             dest = makeroom(h,index,nbytes);
-            WR_BINTERNAL(dest, key, pgno, flags);
+            WR_BINTERNAL(dest, key, pgno, 0);
         }
         else{
             assert(h->flags & P_MEM);
@@ -284,7 +298,6 @@ static pgno_t new_node_id(){
 PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags)
 {
 	PAGE *h;
-    u_char mode;
     pgno_t npg; 
 
     npg = P_INVALID;
