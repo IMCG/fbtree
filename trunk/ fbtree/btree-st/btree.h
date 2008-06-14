@@ -175,7 +175,7 @@ typedef struct _binternal {
 	p += sizeof(pgno_t);						\
 	*(u_char *)p = flags;						\
 	p += sizeof(u_char);						\
-	*(u_char *)p = key->data;						\
+	memmove(p, key->data, key->size);			\
 }
 
 
