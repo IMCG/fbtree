@@ -42,7 +42,8 @@ static void _log_free( LogList* logCollector){
  * It construct the node by apply the logs in order to 'h'.
  * Return PAGE lister of the new node.
  */
-static PAGE* _rebuild_node(PAGE* h, LogList* list){
+static PAGE* _rebuild_node(PAGE* h, LogList* list)
+{
     LogList* entry;
     BLOG* log;
     DBT a,b;
@@ -101,14 +102,15 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list){
  *
  * @return new memory page
  */
-static PAGE* new_node_mem(BTREE* t, pgno_t nid, u_char flags ){
+static PAGE* new_node_mem(BTREE* t, pgno_t nid, u_char type ){
     PAGE* h = (PAGE*)malloc(t->bt_psize);
-    h->pgno = nid;
+    h->nid  = nid;
+    h->pgno = P_INVALID;
 	h->nextpg = P_INVALID;
 	h->prevpg = P_INVALID;
 	h->lower  = BTDATAOFF;
 	h->upper  = t->bt_psize;
-    h->flags = flags | P_MEM;
+    h->flags = type | P_MEM;
     return h;
 }
 
@@ -169,7 +171,7 @@ PAGE* read_node(BTREE* t , pgno_t x)
 #ifdef NODE_DEBUG
         err_debug(("~~^Rebuild node"));
 #endif
-        h = new_node_mem(t,x,entry->flags);
+        h = new_node_mem(t,x,entry->flags & P_TYPE);
         _rebuild_node(h,&logCollector);
         _log_free(&logCollector);
 #ifdef NODE_DEBUG

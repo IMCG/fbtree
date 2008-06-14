@@ -36,7 +36,6 @@ __bt_get_st(const DB* dbp, const DBT *key, DBT *data, u_int flags)
 		errno = EINVAL;
 		return (RET_ERROR);
 	}
-
 	if ((e = __bt_search_st(t, key, &exact)) == NULL)
 		return (RET_ERROR);
 	if (!exact) {

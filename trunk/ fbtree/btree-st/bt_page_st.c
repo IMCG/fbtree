@@ -103,10 +103,10 @@ __bt_new( BTREE *t, pgno_t *npg)
      * Here we set it. It won't affect other code either since they'll reset it
      */
     assert(h!=NULL);
+    h->nid = P_INVALID;
     h->pgno = *npg;
     h->prevpg = h->nextpg = P_INVALID;
 	h->lower = BTDATAOFF;
 	h->upper = t->bt_psize;
-
 	return (h);
 }

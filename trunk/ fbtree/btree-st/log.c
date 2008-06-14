@@ -66,6 +66,7 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t 
 
     assert(op & LOG_LEAF);
     assert(logbuf!=NULL);
+
     entry = NTT_get(nid);
 
     nbytes = data ? NBLOG_DBT(key->size,data->size): NBLOG_DBT(key->size,0);

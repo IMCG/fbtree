@@ -383,9 +383,9 @@ nroot(t)
 		return (RET_ERROR);
     }
 	memset(meta, 0, t->bt_psize);
+
 	Mpool_put(t->bt_mp, meta, MPOOL_DIRTY);
 	Mpool_put(t->bt_mp, root, MPOOL_DIRTY);
-    
 	return (RET_SUCCESS);
 }
 
