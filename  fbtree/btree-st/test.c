@@ -59,12 +59,12 @@ void testBT(){
     //_bt_dump(dbp);
 	
     //NTT_dump();
-    for( i = 0 ; i<3000 ; i++){
-        err_debug1("----\ni=%d\n",i);
+    for( i = 0 ; i<270 ; i++){
+        err_debug(("----i=%d\n",i));
         k = (u_int32_t)i;
         d = (u_int32_t)i*i;
 
-        err_debug1("= BEGIN PUT (%d,%d) =", *(int*)key.data,*(int*)data.data);
+        err_debug(("= BEGIN PUT (%d,%d) =", *(int*)key.data,*(int*)data.data));
         rc = dbp->put(dbp, &key, &data, R_NOOVERWRITE);
         
         
@@ -74,19 +74,18 @@ void testBT(){
         //NTT_dump();
         
         rk=i/2+1;
-        //rk=123;
+        rk=269; 
         rkey.size=4;
         rkey.data=(void*)&rk;
         rdata.size=0;
         rdata.data=NULL;
 
-        err_debug1("\n= BEGIN GET (%d,?)",*(int*)rkey.data);
+        err_debug(("\n= BEGIN GET (%d,?)",*(int*)rkey.data));
         rc = dbp->get(dbp,&rkey,&rdata,0);
         if(rc==-1){
             err_quit("error while try to get ");
         }
         else if(rc==0){
-            err_debug1("find the pair (%d,%d)", *(int*)rkey.data,*(int*)rdata.data);
             err_debug1("(%d,%d)", *(int*)rkey.data,*(int*)rdata.data);
         }
         else{
