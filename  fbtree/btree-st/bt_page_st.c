@@ -108,5 +108,6 @@ __bt_new( BTREE *t, pgno_t *npg)
     h->prevpg = h->nextpg = P_INVALID;
 	h->lower = BTDATAOFF;
 	h->upper = t->bt_psize;
+    err_debug(("new page %u:__bt_new",h->pgno)); 
 	return (h);
 }

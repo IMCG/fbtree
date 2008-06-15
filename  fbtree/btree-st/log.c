@@ -71,16 +71,18 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t 
     entry = NTT_get(nid);
 
     nbytes = data ? NBLOG_DBT(key->size,data->size): NBLOG_DBT(key->size,0);
+
+
     if(!is_enough_room(logbuf,nbytes)){
         //FIXME tmp design, it should be pinned first, though it is actually
         logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
         Mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
         mpool_sync_page(t->bt_mp,pgno_logbuf);
-
         logbuf = __bt_new(t,&pgno_logbuf);
         logbuf->flags = P_LOG;
+    }else{
+        logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
     }
-
     dest = makeroom(logbuf,NEXTINDEX(logbuf),nbytes);
     if(op & LOG_LEAF){
         assert((op & LOG_LEAF) && (pgno==P_INVALID)); 
@@ -110,7 +112,6 @@ void genLogFromNode(BTREE* t, PAGE* pg)
     BINTERNAL* bi=NULL;
     BLEAF* bl=NULL;
     NTTEntry* e;
-    pgno_t npgno;
     DBT key,data;
 
     assert(NEXTINDEX(pg)>0);
@@ -124,7 +125,7 @@ void genLogFromNode(BTREE* t, PAGE* pg)
             assert(bi!=NULL);
             key.size = bi->ksize;
             key.data = bi->bytes;
-            npgno = logpool_put(t,pg->nid,&key,NULL, bi->pgno,ADD_KEY|LOG_INTERNAL);
+            logpool_put(t,pg->nid,&key,NULL, bi->pgno,ADD_KEY|LOG_INTERNAL);
         }
     }else{
         assert(pg->flags & P_BLEAF);
@@ -135,7 +136,7 @@ void genLogFromNode(BTREE* t, PAGE* pg)
             key.data = bl->bytes;
             data.size = bl->dsize;
             data.data = bl->bytes + bl->ksize;
-            npgno = logpool_put(t,pg->nid,&key,&data,P_INVALID,ADD_KEY|LOG_LEAF);
+            logpool_put(t,pg->nid,&key,&data,P_INVALID,ADD_KEY|LOG_LEAF);
         }
     }
         
@@ -149,12 +150,16 @@ static void mpool_sync_page(MPOOL* mp, pgno_t pgno){
     mpool_sync(mp);
 }    
 
-void logpage_dump(PAGE* h){
+void logpage_dump(PAGE* h)
+{
     BLOG* blog;
     int i;
+    assert( (h->flags & P_LOG) && (h->nid == P_INVALID) );
+    err_debug(("---- Log Page %u Dump ----",h->pgno)); 
     for(i =0 ; i<NEXTINDEX(h) ; i++){
       blog = GETBLOG(h,i);
       log_dump(blog);
     }
+    err_debug(("-----------------------")); 
 }
 
