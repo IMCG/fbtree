@@ -56,7 +56,6 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list)
     char * dest;
     const char* err_loc = "(_rebuild_node) in 'node.c'";
 
-    err_debug(("rebuild node %d", h->nid));
     /* TODO sort the log entry by seqnum
      * XXX
      * you must sort the list to make it in order
@@ -65,6 +64,7 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list)
     // apply the log entries to construc a node
     list_for_each_entry(entry,&(list->list),list){
         log = entry->log;
+
         index = search_node(h,log->ksize,log->bytes);
         //LOG ADD KEY
         if(log->flags & ADD_KEY){
@@ -151,7 +151,6 @@ PAGE* read_node(BTREE* t , pgno_t x)
 
             // get the PAGE(pgno)
             h = mpool_get(mp,slist->pgno,0);
-            //logpage_dump(h);
             if( h==NULL ){
                 err_quit("can't get page: %s", err_loc);
             }
@@ -169,15 +168,11 @@ PAGE* read_node(BTREE* t , pgno_t x)
         }
 
         // construct the actual node of the page
-#ifdef NODE_DEBUG
-        err_debug(("~~^Rebuild node"));
-#endif
+        err_debug(("--^Rebuild node %u",x));
         h = new_node_mem(t,x,entry->flags & P_TYPE);
         _rebuild_node(h,&logCollector);
         _log_free(&logCollector);
-#ifdef NODE_DEBUG
-        err_debug(("~~$End Rebuild"));
-#endif
+        err_debug(("--$End Rebuild"));
     }
     else{
         err_quit("error: node[%d], flags=%x: unkown mode: %s", x, entry->flags, err_loc);
@@ -235,7 +230,8 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
  *
  * @return: index s.t.[Ptr[index]] =< key < [Ptr[index+!]]
  */
-indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
+indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[])
+{
 	indx_t base,lim;
     indx_t index;
     DBT k1,k2;
@@ -267,7 +263,9 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
 
 
         if ((cmp = __bt_defcmp(&k1,&k2)) == 0) {
-                return index;
+            base = index;
+            break;
+                //return index;
         }
         if (cmp > 0) {
             base = index + 1;
@@ -277,6 +275,7 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]){
 	//index = base ? base - 1 : base;
     //NOTE It should be base here
     index=base;
+    assert( index>=0 && index<=NEXTINDEX(h));
     return index;
 }
 

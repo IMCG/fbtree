@@ -73,15 +73,13 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t 
     nbytes = data ? NBLOG_DBT(key->size,data->size): NBLOG_DBT(key->size,0);
 
 
+    logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
     if(!is_enough_room(logbuf,nbytes)){
         //FIXME tmp design, it should be pinned first, though it is actually
-        logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
         Mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
         mpool_sync_page(t->bt_mp,pgno_logbuf);
         logbuf = __bt_new(t,&pgno_logbuf);
         logbuf->flags = P_LOG;
-    }else{
-        logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
     }
     dest = makeroom(logbuf,NEXTINDEX(logbuf),nbytes);
     if(op & LOG_LEAF){
