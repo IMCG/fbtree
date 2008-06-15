@@ -34,5 +34,6 @@ char * makeroom(PAGE*h, indx_t skip, u_int32_t nbytes);
 int is_enough_room(PAGE* h , u_int32_t nbytes);
 
 /* fuction for debug */
+void logpage_dump(PAGE* h);
 void log_dump(BLOG* log);
 void disk_entry_dump(void* entry, u_int32_t flags);

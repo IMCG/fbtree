@@ -56,9 +56,7 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list)
     char * dest;
     const char* err_loc = "(_rebuild_node) in 'node.c'";
 
-#ifdef NODE_DEBUG
-    err_debug(("rebuild node %d", h->pgno));
-#endif
+    err_debug(("rebuild node %d", h->nid));
     /* TODO sort the log entry by seqnum
      * XXX
      * you must sort the list to make it in order
@@ -91,7 +89,7 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list)
             err_quit("no delete key yet: %s",err_loc);
         }
         else{
-            err_quit("unkown operation: %s",err_loc);
+            err_quit("flags=%x: unkown operation: %s",log->flags,err_loc);
         }
     }
     return h;
@@ -153,17 +151,18 @@ PAGE* read_node(BTREE* t , pgno_t x)
 
             // get the PAGE(pgno)
             h = mpool_get(mp,slist->pgno,0);
+            //logpage_dump(h);
             if( h==NULL ){
                 err_quit("can't get page: %s", err_loc);
             }
-
+            
             // iterate the page to collect entry in this page
             for(i =0 ; i<NEXTINDEX(h) ; i++){
                 // get the log entry
                 blog = GETBLOG(h,i);
                 // if it belongs to the node x , collect it
                 if( blog->nodeID==x && blog->logversion==entry->logversion){
-                    _log_collect(&logCollector,blog,0);
+                    _log_collect(&logCollector,blog,1);
                 }
             }
             Mpool_put(mp,h,0);
