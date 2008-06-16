@@ -242,14 +242,16 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[])
 
     k1.size=ksize;
     k1.data=(char*)bytes;
-    //err_debug1("k1 = (%d,%d)", k1.size ,*(int*)k1.data); 
+    //err_debug1("k1 = (%d,%x)", k1.size ,*(int*)k1.data); 
     /* Do a binary search on the current page. */
     for (base = 0, lim = NEXTINDEX(h); lim; lim >>= 1) {
         index = base + (lim >> 1);
         /* FIXME: WORKED here? the behavior is different from __bt_cmp in bt_util.c  */
+#if 0
         if (index == 0 && h->prevpg == P_INVALID && !(h->flags & P_BLEAF)){
 		    cmp = 1;
-        }else{
+        }
+#endif
             if(h->flags & P_BINTERNAL){
                 bi=GETBINTERNAL(h,index);
                 k2.data = bi->bytes;
@@ -262,13 +264,13 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[])
             }
 
 
-            //err_debug1("index = %d ,k2 =(%d,%d)", index , k2.size ,*(int*)k2.data); 
             if ((cmp = __bt_defcmp(&k1,&k2)) == 0) {
                 base = index;
                 break;
                     //return index;
             }
-        }
+        
+//            err_debug1("index = %d, cmp = %d, k1 = (%d,%x), k2 =(%d,%x)", index, cmp, k1.size, *(int*)k1.data , k2.size ,*(int*)k2.data); 
         if (cmp > 0) {
             base = index + 1;
             --lim;
