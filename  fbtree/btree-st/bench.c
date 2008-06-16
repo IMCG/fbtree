@@ -39,7 +39,6 @@ void testInsert(){
     int i;
 	double totalTime=0;
 
-	FILE* fp=fopen(config.BTtestcase,"r");
 
 	DB *dbp;
 	DBT key, data;
@@ -47,6 +46,7 @@ void testInsert(){
     long long rk,rd;
     char buf[64];
     long long ibuf; 
+	FILE* fp=fopen(config.BTtestcase,"r");
     if(fp==NULL){
         err_sys("can't open test case file '%s'", config.BTtestcase);
     }
@@ -65,6 +65,7 @@ void testInsert(){
    
     data.data=buf;
 
+	//for (i=0; i<config.BTrecordnum;i++) {
 	for (i=0; i<config.BTrecordnum;i++) {
         rd=0;
 	  fscanf(fp,"%lld",&ibuf);
@@ -104,6 +105,7 @@ void testInsert(){
 #endif
     }
 
+    __bt_stat(dbp);
 	(void)dbp->close(dbp);
 
 

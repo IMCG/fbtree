@@ -306,7 +306,7 @@ typedef struct _btree {
 }
 #define	BT_POP(t)	(t->bt_sp == t->bt_stack ? NULL : --t->bt_sp)
 #define	BT_CLR(t)	(t->bt_sp = t->bt_stack)
-	EPGNO	  bt_stack[50];		/* stack of parent pages */ /* @mx we need to go back when we try to split the node */
+	EPGNO	  bt_stack[100];		/* stack of parent pages */ /* @mx we need to go back when we try to split the node */
 	EPGNO	 *bt_sp;		/* current stack pointer */
 
 	DBT	  bt_rkey;		/* returned key */

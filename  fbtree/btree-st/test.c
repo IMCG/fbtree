@@ -32,6 +32,7 @@ int main(){
 
 void init(){
     config.BTdatfile="test.bt";
+    config.BTtestcase="r.dat";
 }
 void testBT(){
 	DB *dbp;
@@ -42,28 +43,36 @@ void testBT(){
     u_int32_t rk,rd;
     unsigned int i;
 
+	FILE* fp=fopen(config.BTtestcase,"r");
+    if(fp==NULL){
+        err_sys("can't open test case file '%s'", config.BTtestcase);
+    }
 	/* Create the database. */
     dbp=dbopen(config.BTdatfile,O_CREAT|O_RDWR,0600, DB_BTREE ,NULL);
-   
-    k=32;
+	if(!dbp){
+		printf("can't open file");
+		exit(-1);
+	}
+	/*
+	 * Insert records into the database, where the key is the user
+	 * input and the data is the user input in reverse order.
+	 */
+	memset(&key, 0, sizeof(DBT));
+	memset(&data, 0, sizeof(DBT));
+	k=32;
     d=128;
     key.size=4;
     key.data=(void*)&k;
-
     data.size=4;
     data.data=(void*)&d;
-    
-    if(!dbp){
-		err_quit("can't open database %s\n", config.BTdatfile);
-	}
-    //_bt_dump(dbp);
-	
-    //NTT_dump();
-    for( i = 0 ; i<30000 ; i++){
-        //err_debug1("\n----\ni=%d\n",i);
-        k = (u_int32_t)i;
-        d = (u_int32_t)i*i;
 
+    //NTT_dump();
+    for( i = 0 ; i<3000; i++){
+        //err_debug1("\n----\ni=%d\n",i);
+        //k = (u_int32_t)i;
+        //d = (u_int32_t)i*i;
+
+	    fscanf(fp,"%u%u",&k,&d);
         //err_debug1("= BEGIN PUT (%d,%d) =", *(int*)key.data,*(int*)data.data);
         rc = dbp->put(dbp, &key, &data, R_NOOVERWRITE);
         
@@ -73,13 +82,15 @@ void testBT(){
         }
         //NTT_dump();
         
-        rk=i/2+1;
+        //rk=i/2+1;
+        rk=k;
         //rk=269; 
         rkey.size=4;
         rkey.data=(void*)&rk;
         rdata.size=0;
         rdata.data=NULL;
 
+        //err_debug1("\n= BEGIN GETT (%d,?) =", *(int*)rkey.data);
         rc = dbp->get(dbp,&rkey,&rdata,0);
         if(rc==-1){
             err_quit("error while try to get ");
@@ -91,7 +102,7 @@ void testBT(){
             err_debug1("(%d,?) Not in the database", *(int*)rkey.data);
         }
     }
-    //__bt_dump(dbp);
+    __bt_stat(dbp);
 	(void)dbp->close(dbp);
 
  } 

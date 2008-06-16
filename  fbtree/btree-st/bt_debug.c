@@ -247,6 +247,7 @@ __bt_stat(dbp)
 	t = dbp->internal;
 	pcont = pinternal = pleaf = 0;
 	nkeys = ifree = lfree = 0;
+#if 0
 	for (i = P_ROOT; (h = mpool_get(t->bt_mp, i, 0)) != NULL; ++i) {
 		switch (h->flags & P_TYPE) {
 		case P_BINTERNAL:
@@ -277,7 +278,7 @@ __bt_stat(dbp)
 		i = GETBINTERNAL(h, 0)->pgno;
 		(void)Mpool_put(t->bt_mp, h, 0);
 	}
-
+#endif
 	(void)fprintf(stderr, "%d level%s with %ld keys",
 	    levels, levels == 1 ? "" : "s", nkeys);
 	(void)fprintf(stderr,

@@ -290,6 +290,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	//Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
 
 	/* Clear any pages left on the stack. */
+    BT_CLR(t);
 	return (RET_SUCCESS);
 
 	/*
@@ -393,7 +394,7 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 	l->prevpg = h->prevpg;
 	l->lower = BTDATAOFF;
 	l->upper = t->bt_psize;
-	l->flags = h->flags & P_TYPE;
+	l->flags = h->flags;
 	/* Fix up the previous pointer of the page after the split page. */
 	if (h->nextpg != P_INVALID) {
 		if ((tp = mpool_get(t->bt_mp, h->nextpg, 0)) == NULL) {
@@ -422,12 +423,16 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 	memmove(h, l, t->bt_psize);
 	if (tp == l){
 		tp = h;
-        if(r->flags & P_MEM)
+        if(r->flags & P_MEM){
+            err_debug(("gen for left")); 
             genLogFromNode(t,r);
+        }
     }
     else{  /* tp==r  */
-        if(h->flags & P_MEM)
+        if(h->flags & P_MEM){
+            err_debug(("gen for left")); 
             genLogFromNode(t,h);
+        }
     }
 	free(l);
 
