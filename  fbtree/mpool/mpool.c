@@ -145,9 +145,8 @@ mpool_new(mp, pgnoaddr)
 	head = &mp->hqh[HASHKEY(bp->pgno)];
 	CIRCLEQ_INSERT_HEAD(head, bp, hq);
 	CIRCLEQ_INSERT_TAIL(&mp->lqh, bp, q);
-#ifdef MPOOL_DEBUG
-	err_debug(("new page %ud",bp->pgno));
-#endif
+
+	//err_debug(("mpool-new page %ud",bp->pgno));
     return (bp->page);
 }
 
@@ -166,9 +165,8 @@ mpool_get(mp, pgno, flags)
 	off_t off;
 	int nr;
 
-#ifdef MPOOL_DEBUG
-    err_debug(("get page %ud",pgno));
-#endif 
+    //err_debug(("mpool-get page %ud",pgno));
+
 	/* Check for attempt to retrieve a non-existent page. */
 	if (pgno >= mp->npages) {
 		errno = EINVAL;
@@ -182,14 +180,12 @@ mpool_get(mp, pgno, flags)
 	/* Check for a page that is cached. */
 	if ((bp = mpool_look(mp, pgno)) != NULL) {
         /* IMHO: the code is not necessary */
-#if 0
 #ifdef DEBUG
 		if (bp->flags & MPOOL_PINNED) {
 			(void)fprintf(stderr,
 			    "mpool_get: page %d already pinned\n", bp->pgno);
 			abort();
 		}
-#endif
 #endif
         
 		/*
@@ -219,8 +215,10 @@ mpool_get(mp, pgno, flags)
 	if (lseek(mp->fd, off, SEEK_SET) != off)
 		return (NULL);
 	if ((nr = read(mp->fd, bp->page, mp->pagesize)) != mp->pagesize) {
-		if (nr >= 0)
+		if (nr >= 0){
 			errno = EFTYPE;
+        }
+
 		return (NULL);
 	}
 
@@ -260,18 +258,14 @@ mpool_put(mp, page, flags)
 #endif
 	bp = (BKT *)((char *)page - sizeof(BKT));
     
-#ifdef MPOOL_DEBUG
-    err_debug(("put page %ud",bp->pgno));
-#endif
-    //FIXME: comment for debug
-#if 0
+    //err_debug(("mpool-put page %ud",bp->pgno));
+
 #ifdef DEBUG
 	if (!(bp->flags & MPOOL_PINNED)) {
 		(void)fprintf(stderr,
 		    "mpool_put: page %d not pinned\n", bp->pgno);
 		abort();
 	}
-#endif
 #endif
 
 	bp->flags &= ~MPOOL_PINNED;

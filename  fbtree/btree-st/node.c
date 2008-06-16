@@ -66,6 +66,7 @@ static PAGE* _rebuild_node(PAGE* h, LogList* list)
         log = entry->log;
 
         index = search_node(h,log->ksize,log->bytes);
+        //err_debug1("index = %d", index); 
         //LOG ADD KEY
         if(log->flags & ADD_KEY){
             if(log->flags & LOG_LEAF){
@@ -152,7 +153,7 @@ PAGE* read_node(BTREE* t , pgno_t x)
             // get the PAGE(pgno)
             h = mpool_get(mp,slist->pgno,0);
             if( h==NULL ){
-                err_quit("can't get page: %s", err_loc);
+                err_dump("can't get page: %s", err_loc);
             }
             
             // iterate the page to collect entry in this page
@@ -241,31 +242,32 @@ indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[])
 
     k1.size=ksize;
     k1.data=(char*)bytes;
+    //err_debug1("k1 = (%d,%d)", k1.size ,*(int*)k1.data); 
     /* Do a binary search on the current page. */
     for (base = 0, lim = NEXTINDEX(h); lim; lim >>= 1) {
         index = base + (lim >> 1);
         /* FIXME: WORKED here? the behavior is different from __bt_cmp in bt_util.c  */
-#if 0
         if (index == 0 && h->prevpg == P_INVALID && !(h->flags & P_BLEAF)){
 		    cmp = 1;
-        }
-#endif
-        if(h->flags & P_BINTERNAL){
-            bi=GETBINTERNAL(h,index);
-            k2.data = bi->bytes;
-            k2.size = bi->ksize;
         }else{
-            assert(h->flags & P_BLEAF);
-            bl=GETBLEAF(h,index);
-            k2.data = bl->bytes;
-            k2.size = bl->ksize;
-        }
+            if(h->flags & P_BINTERNAL){
+                bi=GETBINTERNAL(h,index);
+                k2.data = bi->bytes;
+                k2.size = bi->ksize;
+            }else{
+                assert(h->flags & P_BLEAF);
+                bl=GETBLEAF(h,index);
+                k2.data = bl->bytes;
+                k2.size = bl->ksize;
+            }
 
 
-        if ((cmp = __bt_defcmp(&k1,&k2)) == 0) {
-            base = index;
-            break;
-                //return index;
+            //err_debug1("index = %d ,k2 =(%d,%d)", index , k2.size ,*(int*)k2.data); 
+            if ((cmp = __bt_defcmp(&k1,&k2)) == 0) {
+                base = index;
+                break;
+                    //return index;
+            }
         }
         if (cmp > 0) {
             base = index + 1;
