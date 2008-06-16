@@ -123,6 +123,39 @@ dataonly:
 }
 
 /*
+ * __BT_DEFCMP -- Default comparison routine.
+ *
+ * Parameters:
+ *	a:	DBT #1
+ *	b: 	DBT #2
+ *
+ * Returns:
+ *	< 0 if a is < b
+ *	= 0 if a is = b
+ *	> 0 if a is > b
+ */
+int
+__bt_defcmp0(a, b)
+	const DBT *a, *b;
+{
+	register size_t len;
+	register u_char *p1, *p2;
+
+	/*
+	 * XXX
+	 * If a size_t doesn't fit in an int, this routine can lose.
+	 * What we need is a integral type which is guaranteed to be
+	 * larger than a size_t, and there is no such thing.
+	 */
+	len = MIN(a->size, b->size);
+	for (p1 = a->data, p2 = b->data; len--; ++p1, ++p2)
+		if (*p1 != *p2)
+			return ((int)*p1 - (int)*p2);
+	return ((int)a->size - (int)b->size);
+}
+
+
+/*
  * __BT_CMP -- Compare a key to a given record.
  *
  * Parameters:
@@ -189,7 +222,8 @@ __bt_cmp(t, k1, e)
 		k2.data = t->bt_rdata.data;
 #endif
 	}
-	return ((*t->bt_cmp)(k1, &k2));
+	return (__bt_defcmp(k1, &k2));
+	//return ((*t->bt_cmp)(k1, &k2));
 }
 
 /*
@@ -237,28 +271,6 @@ __bt_defcmp(a, b)
 	return ((int)a->size - (int)b->size);
 }
 
-#if 0
-int
-__bt_defcmp(a, b)
-       const DBT *a, *b;
-{
-       register size_t len;
-       register u_char *p1, *p2;
-
-
-       /*
-        * XXX
-        * If a size_t doesn't fit in an int, this routine can lose.
-        * What we need is a integral type which is guaranteed to be
-        * larger than a size_t, and there is no such thing.
-        */
-       len = MIN(a->size, b->size);
-       for (p1 = a->data, p2 = b->data; len--; ++p1, ++p2)
-               if (*p1 != *p2)
-                       return ((int)*p1 - (int)*p2);
-       return ((int)a->size - (int)b->size);
-}
-#endif
 /* Mpool_put - the same with Mpool_put except that it will check wheter page is just P_MEM first */
 int Mpool_put( MPOOL *mp, void *page, u_int flags)
 {
