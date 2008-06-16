@@ -9,4 +9,4 @@ make
 ./t &> /tmp/t
 tail /tmp/t
 echo "-------"
-grep -n "not in the database" /tmp/t
+grep -n "Not in the database" /tmp/t

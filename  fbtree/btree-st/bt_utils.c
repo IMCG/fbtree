@@ -203,6 +203,8 @@ __bt_cmp(t, k1, e)
  *	< 0 if a is < b
  *	= 0 if a is = b
  *	> 0 if a is > b
+ *
+ * XXX suppose the machine is  little-endian
  */
 int
 __bt_defcmp(a, b)
@@ -210,20 +212,53 @@ __bt_defcmp(a, b)
 {
 	register size_t len;
 	register u_char *p1, *p2;
+    int i;
 
-	/*
-	 * XXX
-	 * If a size_t doesn't fit in an int, this routine can lose.
-	 * What we need is a integral type which is guaranteed to be
-	 * larger than a size_t, and there is no such thing.
-	 */
-	len = MIN(a->size, b->size);
-	for (p1 = a->data, p2 = b->data; len--; ++p1, ++p2)
+	//len = MIN(a->size, b->size);
+    p1 = (u_char*) a->data + a->size -1 ;
+    p2 = (u_char*) b->data + b->size -1 ;
+    len = a->size;
+    i = a->size - b->size;
+    if(i>0){
+        len = b->size;
+        for ( ; i>0; i--,p1-- )
+            if( *(u_char*)p1 > 0 ) return 1;
+    
+    }else if(i<0){
+        i=-i;
+        for( ; i>0; i--,p2-- ) 
+            if( *(u_char*)p2 > 0 ) return -1;
+    
+    }
+
+	for ( ; len--; --p1, --p2)
 		if (*p1 != *p2)
 			return ((int)*p1 - (int)*p2);
 	return ((int)a->size - (int)b->size);
 }
 
+#if 0
+int
+__bt_defcmp(a, b)
+       const DBT *a, *b;
+{
+       register size_t len;
+       register u_char *p1, *p2;
+
+
+       /*
+        * XXX
+        * If a size_t doesn't fit in an int, this routine can lose.
+        * What we need is a integral type which is guaranteed to be
+        * larger than a size_t, and there is no such thing.
+        */
+       len = MIN(a->size, b->size);
+       for (p1 = a->data, p2 = b->data; len--; ++p1, ++p2)
+               if (*p1 != *p2)
+                       return ((int)*p1 - (int)*p2);
+       return ((int)a->size - (int)b->size);
+}
+#endif
 /* Mpool_put - the same with Mpool_put except that it will check wheter page is just P_MEM first */
 int Mpool_put( MPOOL *mp, void *page, u_int flags)
 {

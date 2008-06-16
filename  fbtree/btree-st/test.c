@@ -59,7 +59,7 @@ void testBT(){
     //_bt_dump(dbp);
 	
     //NTT_dump();
-    for( i = 0 ; i<3000 ; i++){
+    for( i = 0 ; i<30000 ; i++){
         //err_debug1("\n----\ni=%d\n",i);
         k = (u_int32_t)i;
         d = (u_int32_t)i*i;
