@@ -279,15 +279,15 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
             genLogFromNode(t,h);
         }
 
-		Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
-		Mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
+		//Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
+		//Mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
 
         err_debug(("-^End update", parent->pgno)); 
 	}
 
 	/* Unpin the held pages. */
-	Mpool_put(t->bt_mp, l, MPOOL_DIRTY);
-	Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
+	//Mpool_put(t->bt_mp, l, MPOOL_DIRTY);
+	//Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
 
 	/* Clear any pages left on the stack. */
 	return (RET_SUCCESS);

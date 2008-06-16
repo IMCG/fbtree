@@ -38,7 +38,6 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 	t = dbp->internal;
 
     bt_tosspinned(t);
-
 	/* Check for change to a read-only tree. */
 	if (F_ISSET(t, B_RDONLY)) {
 		errno = EPERM;
@@ -102,6 +101,7 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
      * FIXME leaf is always in disk mode here
      */
     err_debug(("leaf room is enough, insert"));
+
     node_addkey(t,h,key,data,P_INVALID,index,nbytes);
 
     // if the insert position is the leftmost/rightmost, set them   

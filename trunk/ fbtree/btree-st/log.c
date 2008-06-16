@@ -53,6 +53,7 @@ static PAGE* logbuf;
 void logpool_init(BTREE* t){
     logbuf = __bt_new(t,&pgno_logbuf);
     logbuf->flags = P_LOG;
+    Mpool_put(t->bt_mp,logbuf,0);
 }
 
 /**
@@ -66,21 +67,22 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t 
     NTTEntry* entry;
     char * dest;
 
-    assert(logbuf!=NULL);
 
     entry = NTT_get(nid);
 
     nbytes = data ? NBLOG_DBT(key->size,data->size): NBLOG_DBT(key->size,0);
 
-
+    //assert(logbuf->pgno == pgno_logbuf);
     logbuf = mpool_get(t->bt_mp,pgno_logbuf,0);
+    assert(logbuf!=NULL);
     if(!is_enough_room(logbuf,nbytes)){
         //FIXME tmp design, it should be pinned first, though it is actually
         Mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
-        mpool_sync_page(t->bt_mp,pgno_logbuf);
+        //mpool_sync_page(t->bt_mp,pgno_logbuf);
         logbuf = __bt_new(t,&pgno_logbuf);
         logbuf->flags = P_LOG;
     }
+
     dest = makeroom(logbuf,NEXTINDEX(logbuf),nbytes);
     if(op & LOG_LEAF){
         assert((op & LOG_LEAF) && (pgno==P_INVALID)); 
@@ -91,10 +93,10 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t 
         WR_BLOG_DBT_BI(dest,nid,key,pgno,entry->maxSeq+1,entry->logversion,op);
         entry->maxSeq++;
     }
+    logbuf = mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
     //log_dump(GETBLOG(logbuf,NEXTINDEX(logbuf)-1));
 
     NTT_add_pgno(nid,pgno_logbuf);
-    Mpool_put(t->bt_mp,logbuf,MPOOL_DIRTY);
 
     return pgno_logbuf;
 }
@@ -112,6 +114,7 @@ void genLogFromNode(BTREE* t, PAGE* pg)
     NTTEntry* e;
     DBT key,data;
 
+    assert(pg->flags & P_MEM);
     assert(NEXTINDEX(pg)>0);
     err_debug(("~^Generate log entry from node %u",pg->nid));
 
