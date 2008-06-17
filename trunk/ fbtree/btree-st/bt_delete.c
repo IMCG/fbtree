@@ -109,7 +109,7 @@ __bt_bdelete( BTREE *t, const DBT *key)
 loop:	if ((e = __bt_search(t, key, &exact)) == NULL)
 		return (deleted ? RET_SUCCESS : RET_ERROR);
 	if (!exact) {
-		mpool_put(t->bt_mp, e->page, 0);
+		Mpool_put(t->bt_mp, e->page, 0);
 		return (deleted ? RET_SUCCESS : RET_SPECIAL);
 	}
 
@@ -122,7 +122,7 @@ loop:	if ((e = __bt_search(t, key, &exact)) == NULL)
 	h = e->page;
 	do {
 		if (__bt_dleaf(t, key, h, e->index)) {
-			mpool_put(t->bt_mp, h, 0);
+			Mpool_put(t->bt_mp, h, 0);
 			return (RET_ERROR);
 		}
 		if (F_ISSET(t, B_NODUPS)) {
@@ -130,7 +130,7 @@ loop:	if ((e = __bt_search(t, key, &exact)) == NULL)
 				if (__bt_pdelete(t, h))
 					return (RET_ERROR);
 			} else
-				mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+				Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 			return (RET_SUCCESS);
 		}
 		deleted = 1;
@@ -145,7 +145,7 @@ loop:	if ((e = __bt_search(t, key, &exact)) == NULL)
 		if (__bt_cmp(t, key, e) != 0)
 			break;
 		if (__bt_dleaf(t, key, h, e->index) == RET_ERROR) {
-			mpool_put(t->bt_mp, h, 0);
+			Mpool_put(t->bt_mp, h, 0);
 			return (RET_ERROR);
 		}
 		if (e->index == 0)
@@ -160,7 +160,7 @@ loop:	if ((e = __bt_search(t, key, &exact)) == NULL)
 	}
 
 	/* Put the page. */
-	mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 
 	if (redo)
 		goto loop;
@@ -179,7 +179,7 @@ loop:	if ((e = __bt_search(t, key, &exact)) == NULL)
  *	RET_SUCCESS, RET_ERROR.
  *
  * Side-effects:
- *	mpool_put's the page
+ *	Mpool_put's the page
  */
 static int
 __bt_pdelete( BTREE *t, PAGE *h)
@@ -187,9 +187,8 @@ __bt_pdelete( BTREE *t, PAGE *h)
 	BINTERNAL *bi;
 	PAGE *pg;
 	EPGNO *parent;
-	indx_t cnt, index, *ip, offset;
+	indx_t index;
 	u_int32_t nksize;
-	char *from;
 
 	/*
 	 * Walk the parent page stack -- a LIFO stack of the pages that were
@@ -211,19 +210,14 @@ __bt_pdelete( BTREE *t, PAGE *h)
 		index = parent->index;
 		bi = GETBINTERNAL(pg, index);
 
-		/* Free any overflow pages. */
-		if (bi->flags & P_BIGKEY &&
-		    __ovfl_delete(t, bi->bytes) == RET_ERROR) {
-			mpool_put(t->bt_mp, pg, 0);
-			return (RET_ERROR);
-		}
+        assert(!(bi->flags & P_BIGKEY));
 
 		/*
 		 * Free the parent if it has only the one key and it's not the
 		 * root page. If it's the rootpage, turn it back into an empty
 		 * leaf page.
 		 */
-		if (NEXTINDEX(pg) == 1)
+		if (NEXTINDEX(pg) == 1){
 			if (pg->pgno == P_ROOT) {
 				pg->lower = BTDATAOFF;
 				pg->upper = t->bt_psize;
@@ -233,30 +227,20 @@ __bt_pdelete( BTREE *t, PAGE *h)
 					return (RET_ERROR);
 				continue;
 			}
+        }
 		else {
 			/* Pack remaining key items at the end of the page. */
 			nksize = NBINTERNAL(bi->ksize);
-			from = (char *)pg + pg->upper;
-			memmove(from + nksize, from, (char *)bi - from);
-			pg->upper += nksize;
-
-			/* Adjust indices' offsets, shift the indices down. */
-			offset = pg->linp[index];
-			for (cnt = index, ip = &pg->linp[0]; cnt--; ++ip)
-				if (ip[0] < offset)
-					ip[0] += nksize;
-			for (cnt = NEXTINDEX(pg) - index; --cnt; ++ip)
-				ip[0] = ip[1] < offset ? ip[1] + nksize : ip[1];
-			pg->lower -= sizeof(indx_t);
+            shrinkroom(pg, index, nksize);
 		}
 
-		mpool_put(t->bt_mp, pg, MPOOL_DIRTY);
+		Mpool_put(t->bt_mp, pg, MPOOL_DIRTY);
 		break;
 	}
 
 	/* Free the leaf page, as long as it wasn't the root. */
 	if (h->pgno == P_ROOT) {
-		mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+		Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 		return (RET_SUCCESS);
 	}
 	return (__bt_relink(t, h) || __bt_free(t, h));
@@ -274,34 +258,25 @@ __bt_pdelete( BTREE *t, PAGE *h)
  *
  * Returns:
  *	RET_SUCCESS, RET_ERROR.
+ *
+ * int node_delkey(BTREE* t,PAGE* h, const DBT* key, indx_t index)
  */
 int
 __bt_dleaf( BTREE *t, const DBT *key, PAGE *h, u_int index)
 {
 	BLEAF *bl;
-	indx_t cnt, *ip, offset;
 	u_int32_t nbytes;
-	void *to;
-	char *from;
 
 	/* If the entry uses overflow pages, make them available for reuse. */
-	to = bl = GETBLEAF(h, index);
     assert( !(bl->flags & P_BIGKEY) && !(bl->flags & P_BIGDATA));
 
 	/* Pack the remaining key/data items at the end of the page. */
 	nbytes = NBLEAF(bl);
-	from = (char *)h + h->upper;
-	memmove(from + nbytes, from, (char *)to - from);
-	h->upper += nbytes;
+    shrinkroom(h,index,nbytes);
 
-	/* Adjust the indices' offsets, shift the indices down. */
-	offset = h->linp[index];
-	for (cnt = index, ip = &h->linp[0]; cnt--; ++ip)
-		if (ip[0] < offset)
-			ip[0] += nbytes;
-	for (cnt = NEXTINDEX(h) - index; --cnt; ++ip)
-		ip[0] = ip[1] < offset ? ip[1] + nbytes : ip[1];
-	h->lower -= sizeof(indx_t);
+    if(h->flags & P_MEM){
+        logpool_put(t,h->nid,key,NULL,P_INVALID,DELETE_KEY| P_LEAF);
+    }
 
 	return (RET_SUCCESS);
 }
@@ -324,13 +299,13 @@ __bt_relink( BTREE *t, PAGE *h)
 		if ((pg = mpool_get(t->bt_mp, h->nextpg, 0)) == NULL)
 			return (RET_ERROR);
 		pg->prevpg = h->prevpg;
-		mpool_put(t->bt_mp, pg, MPOOL_DIRTY);
+		Mpool_put(t->bt_mp, pg, MPOOL_DIRTY);
 	}
 	if (h->prevpg != P_INVALID) {
 		if ((pg = mpool_get(t->bt_mp, h->prevpg, 0)) == NULL)
 			return (RET_ERROR);
 		pg->nextpg = h->nextpg;
-		mpool_put(t->bt_mp, pg, MPOOL_DIRTY);
+		Mpool_put(t->bt_mp, pg, MPOOL_DIRTY);
 	}
 	return (0);
 }
