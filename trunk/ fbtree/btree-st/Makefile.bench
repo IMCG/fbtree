@@ -1,16 +1,18 @@
 bench: bench.o timer.o random.o RCconfig.o
-	gcc bench.o timer.o random.o RCconfig.o -o bench -ldbst 
+	gcc -O -pg -g bench.o timer.o random.o RCconfig.o -o bench -ldbst 
+
+CL=	${CC} -O -pg -g -c 
 
 bench.o: 
-	gcc -g -c  bench.c -o bench.o -I../include -I../PORT/include -I../util
+	$(CL)  bench.c -o bench.o -I../include -I../PORT/include -I../util
 
 timer.o: 
-	gcc -g -c ../util/timer.c -o timer.o -I../util
+	$(CL) ../util/timer.c -o timer.o -I../util
 
 random.o: 
-	gcc -g -c ../util/random.c -o random.o 
+	$(CL) ../util/random.c -o random.o 
 
 RCconfig.o: 
-	gcc -g -c ../util/RCconfig.c -o RCconfig.o -I../util
+	$(CL) ../util/RCconfig.c -o RCconfig.o -I../util
 
 
