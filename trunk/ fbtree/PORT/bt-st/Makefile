@@ -4,7 +4,7 @@ LIBDB=	libdb.a
 # - bt_delete bt_overflow bt_seq
 OBJ2=	bt_close.o bt_conv.o bt_debug.o bt_get_st.o bt_open.o \
 	bt_page_st.o bt_put_st.o bt_search_st.o bt_split_st.o \
-	bt_utils.o
+	bt_utils.o bt_delete.o
 OBJ3=	db.o
 OBJ4=	mpool.o
 OBJ5=	error.o errorlog.o NTT.o log.o node.o

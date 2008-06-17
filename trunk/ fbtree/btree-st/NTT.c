@@ -68,6 +68,15 @@ void NTT_new(pgno_t nid, u_int32_t flags){
 }
 
 /**
+ * NTT_free - free node[nid] in the NTT
+ * @nid - node id
+ */
+void NTT_free(pgno_t nid){
+    NTTEntry * entry = NTT_get(nid);
+    NTT_del_list(entry);
+    entry->flags = P_NOTUSED; 
+}
+/**
  * NTT_add_pgno - Add pgno to the sector list of NTT[nodeID]
  * @nodeID: page no of the node
  * @pgno: pgno to insert into

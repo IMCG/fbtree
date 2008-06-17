@@ -1,7 +1,7 @@
 #ifndef _MX_CONFIG_H_
 #define _MX_CONFIG_H_
 
-//#define TEST_DEBUG
+#define TEST_DEBUG
 
 #ifndef DEBUG
     #define DEBUG

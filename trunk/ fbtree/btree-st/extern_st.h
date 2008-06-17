@@ -25,12 +25,13 @@ PAGE* read_node(BTREE* mp , pgno_t x);
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
 
 void genLogFromNode(BTREE* t, PAGE* pg);
-
+int free_node(BTREE* t, PAGE* h);
 
 /* Other Operation */
 int Mpool_put( MPOOL *mp, void *page, u_int flags);
 void bt_tosspinned(BTREE* t);
 char * makeroom(PAGE*h, indx_t skip, u_int32_t nbytes);
+void shrinkroom(PAGE*h, indx_t index, u_int32_t nbytes);
 int is_enough_room(PAGE* h , u_int32_t nbytes);
 
 /* fuction for debug */
