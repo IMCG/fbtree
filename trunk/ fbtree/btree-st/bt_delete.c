@@ -76,16 +76,10 @@ __bt_delete( const DB *dbp, const DBT *key, u_int flags)
 		errno = EPERM;
 		return (RET_ERROR);
 	}
-
-	switch (flags) {
-	case 0:
-		status = __bt_bdelete(t, key);
-		break;
-	default:
-		errno = EINVAL;
-		return (RET_ERROR);
-	}
-	if (status == RET_SUCCESS)
+    assert(flags==0);
+	status = __bt_bdelete(t, key);
+	
+    if (status == RET_SUCCESS)
 		F_SET(t, B_MODIFIED);
 	return (status);
 }
