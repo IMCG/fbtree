@@ -348,5 +348,18 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t type)
 	return (h);
 }
 
+/*
+* free_node - free the logical node
+*/
+int free_node(BTREE* t, PAGE* h)
+{
+    NTT_free(h->nid);
+    if(h->flags & P_DISK){
+        __bt_free(t,h);
+    }else{
+        assert(h->flags & P_MEM);
+        free(h);
+    }
 
+}
 

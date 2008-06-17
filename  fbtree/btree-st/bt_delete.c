@@ -63,7 +63,6 @@ int
 __bt_delete( const DB *dbp, const DBT *key, u_int flags)
 {
 	BTREE *t;
-	PAGE *h;
 	int status;
 
 	t = dbp->internal;
@@ -106,7 +105,7 @@ __bt_bdelete( BTREE *t, const DBT *key)
 	deleted = 0;
 
 	/* Find any matching record; __bt_search pins the page. */
-loop:	if ((e = __bt_search(t, key, &exact)) == NULL)
+loop:	if ((e = __bt_search_st(t, key, &exact)) == NULL)
 		return (deleted ? RET_SUCCESS : RET_ERROR);
 	if (!exact) {
 		Mpool_put(t->bt_mp, e->page, 0);
@@ -187,6 +186,7 @@ __bt_pdelete( BTREE *t, PAGE *h)
 	BINTERNAL *bi;
 	PAGE *pg;
 	EPGNO *parent;
+    DBT key;
 	indx_t index;
 	u_int32_t nksize;
 
@@ -204,8 +204,7 @@ __bt_pdelete( BTREE *t, PAGE *h)
 	 */
 	while ((parent = BT_POP(t)) != NULL) {
 		/* Get the parent page. */
-		if ((pg = mpool_get(t->bt_mp, parent->pgno, 0)) == NULL)
-			return (RET_ERROR);
+        pg = read_node(t,parent->pgno);
 		
 		index = parent->index;
 		bi = GETBINTERNAL(pg, index);
@@ -223,7 +222,7 @@ __bt_pdelete( BTREE *t, PAGE *h)
 				pg->upper = t->bt_psize;
 				pg->flags = P_BLEAF;
 			} else {
-				if (__bt_relink(t, pg) || __bt_free(t, pg))
+				if (__bt_relink(t, pg) || free_node(t, pg))
 					return (RET_ERROR);
 				continue;
 			}
@@ -231,6 +230,11 @@ __bt_pdelete( BTREE *t, PAGE *h)
 		else {
 			/* Pack remaining key items at the end of the page. */
 			nksize = NBINTERNAL(bi->ksize);
+            key.size = bi->ksize;
+            key.data = bi->bytes;
+            /* FIXME: what about the same key ? */
+            if(pg->flags & P_MEM)
+                logpool_put(t,pg->nid, &key ,NULL, bi->pgno ,DELETE_KEY| P_BINTERNAL);
             shrinkroom(pg, index, nksize);
 		}
 
@@ -243,7 +247,7 @@ __bt_pdelete( BTREE *t, PAGE *h)
 		Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 		return (RET_SUCCESS);
 	}
-	return (__bt_relink(t, h) || __bt_free(t, h));
+	return (__bt_relink(t, h) || free_node(t, h));
 }
 
 /*
@@ -275,7 +279,7 @@ __bt_dleaf( BTREE *t, const DBT *key, PAGE *h, u_int index)
     shrinkroom(h,index,nbytes);
 
     if(h->flags & P_MEM){
-        logpool_put(t,h->nid,key,NULL,P_INVALID,DELETE_KEY| P_LEAF);
+        logpool_put(t,h->nid,key,NULL,P_INVALID,DELETE_KEY| P_BLEAF);
     }
 
 	return (RET_SUCCESS);
