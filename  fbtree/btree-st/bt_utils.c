@@ -123,39 +123,6 @@ dataonly:
 }
 
 /*
- * __BT_DEFCMP -- Default comparison routine.
- *
- * Parameters:
- *	a:	DBT #1
- *	b: 	DBT #2
- *
- * Returns:
- *	< 0 if a is < b
- *	= 0 if a is = b
- *	> 0 if a is > b
- */
-int
-__bt_defcmp0(a, b)
-	const DBT *a, *b;
-{
-	register size_t len;
-	register u_char *p1, *p2;
-
-	/*
-	 * XXX
-	 * If a size_t doesn't fit in an int, this routine can lose.
-	 * What we need is a integral type which is guaranteed to be
-	 * larger than a size_t, and there is no such thing.
-	 */
-	len = MIN(a->size, b->size);
-	for (p1 = a->data, p2 = b->data; len--; ++p1, ++p2)
-		if (*p1 != *p2)
-			return ((int)*p1 - (int)*p2);
-	return ((int)a->size - (int)b->size);
-}
-
-
-/*
  * __BT_CMP -- Compare a key to a given record.
  *
  * Parameters:
@@ -214,13 +181,6 @@ __bt_cmp(t, k1, e)
 
 	if (bigkey) {
         err_quit("not support big key yet");
-        /* XXX No BIGKEY yet*/
-#if 0
-		if (__ovfl_get(t, bigkey,
-		    &k2.size, &t->bt_rdata.data, &t->bt_rdata.size))
-			return (RET_ERROR);
-		k2.data = t->bt_rdata.data;
-#endif
 	}
 	return (__bt_defcmp(k1, &k2));
 	//return ((*t->bt_cmp)(k1, &k2));
