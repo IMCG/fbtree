@@ -278,3 +278,30 @@ char * makeroom(PAGE*h, indx_t skip, u_int32_t nbytes){
     return dest;
 }
 
+/**
+ * shrinkroom - shrink the room to delete the key
+ *
+ * @h: page
+ * @skip:
+ * @nbytes: number of bytes of delete key/data
+ */
+
+void shrinkroom(PAGE*h, indx_t index, u_int32_t nbytes){
+	char *from;
+	indx_t cnt, *ip, offset;
+	
+    /* Pack the remaining key/data items at the end of the page. */
+    from = (char *)h + h->upper;
+	memmove(from + nbytes, from, h->linp[index] - h->upper);
+	h->upper += nbytes;
+
+	/* Adjust the indices' offsets, shift the indices down. */
+	offset = h->linp[index];
+	for (cnt = index, ip = &h->linp[0]; cnt--; ++ip)
+		if (ip[0] < offset)
+			ip[0] += nbytes;
+	for (cnt = NEXTINDEX(h) - index; --cnt; ++ip)
+		ip[0] = ip[1] < offset ? ip[1] + nbytes : ip[1];
+	h->lower -= sizeof(indx_t);
+}
+    
