@@ -99,9 +99,9 @@ typedef struct _BLOG{
 	p += sizeof(pgno_t);				\
     *(u_int32_t*)p = data->size;     \
     p+=sizeof(u_int32_t);               \
-	*(pgno_t *)p = seqnum;		\
+	*(u_int32_t *)p = seqnum;		\
 	p += sizeof(u_int32_t);				\
-	*(pgno_t *)p = logversion;	\
+	*(u_int32_t *)p = logversion;	\
 	p += sizeof(u_int32_t);				\
 	*(u_char *)p = flags;			\
 	p += sizeof(u_char);				\
