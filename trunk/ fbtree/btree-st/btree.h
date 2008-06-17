@@ -107,7 +107,7 @@ typedef struct _page {
 
 /* First and next index. */
 #define	BTDATAOFF							\
-	(sizeof(pgno_t) + sizeof(pgno_t) + sizeof(pgno_t) +		\
+	(sizeof(pgno_t) + sizeof(pgno_t) + sizeof(pgno_t) + sizeof(pgno_t) + \
 	    sizeof(u_int32_t) + sizeof(indx_t) + sizeof(indx_t))
 #define	NEXTINDEX(p)	(((p)->lower - BTDATAOFF) / sizeof(indx_t))
 
