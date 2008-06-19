@@ -182,6 +182,24 @@ PAGE* read_node(BTREE* t , pgno_t x)
     return h;
 
 }
+
+#if 0
+void switch_node(BTREE* t,  u_int32_t op, u_int32_t type  ){
+    u_int32_t c1; /* cost of serving O in current mode */
+    u_int32_t c2; /* cost of serving O in the other mode */
+    /* current mode: Disk mode */
+    if(flags & )
+    /* write */
+    if()
+    c1 = t->cw * t->node_size;  
+    c2 = 
+
+    /* current mode: Log mode */
+    /* write */
+    c1 = t->cw * l  / t->log_per_page
+}
+#endif
+
 /**
  * node_addkey - Add Key to  a node
  * 
@@ -189,8 +207,8 @@ PAGE* read_node(BTREE* t , pgno_t x)
  * @key
  * @data: NULL for BINTERNAL node
  * @pgno: P_INVALID for BLEAF node
- * @index: insert position
- * @nbytes: number of bytes of insert key/data
+ * @index: not used by  P_LOG. insert position
+ * @nbytes: not used by P_LOG. number of bytes of insert key/data
  * @flags: 
  */
 void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,

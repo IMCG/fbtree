@@ -223,13 +223,42 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
         // XXX we just construct all the logs to make it simple first
         else {
             err_debug(("shift the parent page"));    
-            if (skip < (nxtindex = NEXTINDEX(h)))
-                memmove(h->linp + skip + 1, h->linp + skip,
-                    (nxtindex - skip) * sizeof(indx_t));
-            h->lower += sizeof(indx_t);
-			
-            parentsplit = 0;
-		}
+            makeroom(h,skip,nbytes);
+            /* Insert the key into the parent page. */
+            switch (rchild->flags & P_TYPE) {
+            case P_BINTERNAL:
+                memmove(dest, bi, nbytes);
+                ((BINTERNAL *)dest)->pgno = rchild->nid;
+                break;
+            case P_BLEAF:
+                WR_BINTERNAL_OLD(dest, nksize ? nksize : bl->ksize,
+                    rchild->nid, bl->flags & P_BIGKEY);
+                memmove(dest, bl->bytes, nksize ? nksize : bl->ksize);
+                if (bl->flags & P_BIGKEY &&
+                    bt_preserve(t, *(pgno_t *)bl->bytes) == RET_ERROR)
+                    goto err1;
+                break;
+            default:
+                abort();
+            }
+            /* Unpin the held pages. */
+
+            if(h->flags & P_DISK){
+                Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+            }
+            else{
+                DBT tkey;
+                assert(h->flags & P_MEM);
+                BINTERNAL* bl=(BINTERNAL*)((char *)h + h->linp[skip]);
+                tkey.size = bl->ksize;
+                tkey.data = bl->bytes;
+                //logpool_put(t,h->nid,&tkey,NULL,bl->pgno,LOG_INTERNAL | ADD_KEY);
+                node_addkey(t,h,&tkey,NULL,bl->pgno,0, 0);
+            }
+            break;
+
+
+   		}
 
 		h->linp[skip] = h->upper -= nbytes;
 		dest = (char *)h + h->linp[skip];
@@ -249,23 +278,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 			break;
 		default:
 			abort();
-		}
-		/* Unpin the held pages. */
-        /* @mx parent is not splited, you only need to add a signle log entry */
-		if (!parentsplit) {
-
-            if(h->flags & P_DISK){
-			    Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
-            }
-            else{
-                DBT tkey;
-                assert(h->flags & P_MEM);
-                BINTERNAL* bl=(BINTERNAL*)((char *)h + h->linp[skip]);
-                tkey.size = bl->ksize;
-                tkey.data = bl->bytes;
-                logpool_put(t,h->nid,&tkey,NULL,bl->pgno,LOG_INTERNAL | ADD_KEY);
-            }
-			break;
 		}
 
 		/* If the root page was split, make it look right. */
