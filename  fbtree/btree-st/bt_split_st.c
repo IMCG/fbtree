@@ -86,7 +86,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	indx_t nxtindex;
 	u_int16_t skip;
 	u_int32_t nbytes, nksize;
-	int parentsplit;
 	char *dest;
 
 	skip = argskip; /* @mx why not use argskip directly ? */
@@ -208,21 +207,10 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		 * Split the parent page if necessary or shift the indices. 
          */
 
-        /* === Case 1. Split the parent page === */
-		if (h->upper - h->lower < nbytes + sizeof(indx_t)) {
-            err_debug(("split the parent page"));    
-			sp = h;
-			h = h->nid== P_ROOT ?
-			    bt_root(t, h, &l, &r, &skip, nbytes) :
-			    bt_page(t, h, &l, &r, &skip, nbytes);
-			if (h == NULL)
-				goto err1;
-			parentsplit = 1;
-		} 
-        /* === Case 2. shift the indices. === */
-        // XXX we just construct all the logs to make it simple first
-        else {
+        /* === Case 1. shift the indices. === */
+		if (h->upper - h->lower >= nbytes + sizeof(indx_t)) {
             err_debug(("shift the parent page"));    
+
             dest = makeroom(h,skip,nbytes);
             /* Insert the key into the parent page. */
             switch (rchild->flags & P_TYPE) {
@@ -234,9 +222,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
                 WR_BINTERNAL_OLD(dest, nksize ? nksize : bl->ksize,
                     rchild->nid, bl->flags & P_BIGKEY);
                 memmove(dest, bl->bytes, nksize ? nksize : bl->ksize);
-                if (bl->flags & P_BIGKEY &&
-                    bt_preserve(t, *(pgno_t *)bl->bytes) == RET_ERROR)
-                    goto err1;
+                assert(!(bl->flags & P_BIGKEY));
                 break;
             default:
                 abort();
@@ -251,11 +237,21 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
                 BINTERNAL* bl=(BINTERNAL*)((char *)h + h->linp[skip]);
                 tkey.size = bl->ksize;
                 tkey.data = bl->bytes;
-                logpool_put(t,h->nid,&tkey,NULL,bl->pgno,LOG_INTERNAL | ADD_KEY);
+                //logpool_put(t,h->nid,&tkey,NULL,bl->pgno,LOG_INTERNAL | ADD_KEY);
+                node_addkey(t,h,&tkey,NULL,bl->pgno,0, 0);
             }
-			break;
 
-		}
+			break;
+		} 
+        /* === Case 2. Split the parent page === */
+        err_debug(("split the parent page"));    
+        sp = h;
+        h = h->nid== P_ROOT ?
+            bt_root(t, h, &l, &r, &skip, nbytes) :
+            bt_page(t, h, &l, &r, &skip, nbytes);
+        if (h == NULL)
+            goto err1;
+
 
 		h->linp[skip] = h->upper -= nbytes;
 		dest = (char *)h + h->linp[skip];
@@ -269,9 +265,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 			WR_BINTERNAL_OLD(dest, nksize ? nksize : bl->ksize,
 			    rchild->nid, bl->flags & P_BIGKEY);
 			memmove(dest, bl->bytes, nksize ? nksize : bl->ksize);
-			if (bl->flags & P_BIGKEY &&
-			    bt_preserve(t, *(pgno_t *)bl->bytes) == RET_ERROR)
-				goto err1;
+            assert(!(bl->flags & P_BIGKEY));
 			break;
 		default:
 			abort();
