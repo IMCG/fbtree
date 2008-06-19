@@ -117,7 +117,19 @@ static inline void list_move(struct list_head *list, struct list_head *head)
         __list_del(list->prev, list->next);
         list_add(list, head);
 }
-
+/**
+ * list_swap - swap two position of list head
+ *
+ * swap position of a and b 
+ * by mx 
+ */
+static inline void list_swap(struct list_head *a, struct list_head *b)
+{
+    struct list_head * tmp;
+    tmp = a->prev;
+    list_move(a,b);
+    list_move(b,tmp);
+}
 /**
  * list_move_tail - delete from one list and add as another's tail
  * @list: the entry to move
@@ -236,6 +248,21 @@ static inline void list_splice_init(struct list_head *list,
  */
 #define list_for_each_entry_safe(pos, n, head, member)			\
 	for (pos = list_entry((head)->next, typeof(*pos), member),	\
+		n = list_entry(pos->member.next, typeof(*pos), member);	\
+	     &pos->member != (head); 					\
+	     pos = n, n = list_entry(n->member.next, typeof(*n), member))
+
+/**
+ * iterate between (begin,end)
+ * by mx
+ */
+#define list_iterate_entry( pos, begin, end, member) \
+	for (pos = list_entry((begin)->next , typeof(*pos), member);	\
+	     &pos->member != (end); 					\
+	     pos = list_entry(pos->member.next, typeof(*pos), member))
+
+#define list_iterate_entry_safe(pos, n, begin, end, member)			\
+	for (pos = list_entry((begin)->next, typeof(*pos), member),	\
 		n = list_entry(pos->member.next, typeof(*pos), member);	\
 	     &pos->member != (head); 					\
 	     pos = n, n = list_entry(n->member.next, typeof(*n), member))

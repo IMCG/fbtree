@@ -1,7 +1,7 @@
 #include "btree.h"
 #include "list.h"
 /*use an arry to implement NTT first*/
-#define NTT_MAXSIZE 204800
+#define NTT_MAXSIZE 102400
 //static NTTEntry NTT[NTT_MAXSIZE];
 static NTTEntry NTT[NTT_MAXSIZE];
 

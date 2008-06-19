@@ -21,8 +21,9 @@ typedef struct _sectorlist{
 typedef struct _NTTentry{
     u_int32_t   logversion;
     u_int32_t   maxSeq;
+    u_int32_t   flags;        /* Note: clear P_NOTUSED when set others!!! */
+    u_int32_t   f;            /* Accumulated difference of costs of the two mode since last mode switch */
     SectorList  list;
-    u_int32_t        flags;        /* Note: clear P_NOTUSED when set others!!! */
 }NTTEntry;
 
 
