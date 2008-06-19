@@ -85,7 +85,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	PAGE *h, *l, *r, *lchild, *rchild;
 	indx_t nxtindex;
 	u_int16_t skip;
-	u_int32_t nbytes, nksize;
+	u_int32_t nbytes;
 	char *dest;
 
 	skip = argskip; /* @mx why not use argskip directly ? */
@@ -174,18 +174,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 
 		/*
          * Calculate the space needed on the parent page. 
-		 * {{{
-		 * Prefix trees: space hack when inserting into BINTERNAL
-		 * pages.  Retain only what's needed to distinguish between
-		 * the new entry and the LAST entry on the page to its left.
-		 * If the keys compare equal, retain the entire key.  Note,
-		 * we don't touch overflow keys, and the entire key must be
-		 * retained for the next-to-left most key on the leftmost
-		 * page of each level, or the search will fail.  Applicable
-		 * ONLY to internal pages that have leaf pages as children.
-		 * Further reduction of the key between pairs of internal
-		 * pages loses too much information.
-         * }}}  
 		 */
 		switch (rchild->flags & P_TYPE) {
 		case P_BINTERNAL:
@@ -195,7 +183,6 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		case P_BLEAF:
 			bl = GETBLEAF(rchild, 0);
 			nbytes = NBINTERNAL(bl->ksize);
-			nksize = 0;
 			break;
 		default:
 			abort();
@@ -209,38 +196,23 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 
         /* === Case 1. shift the indices. === */
 		if (h->upper - h->lower >= nbytes + sizeof(indx_t)) {
+            DBT tkey;
             err_debug(("shift the parent page"));    
-
-            dest = makeroom(h,skip,nbytes);
             /* Insert the key into the parent page. */
             switch (rchild->flags & P_TYPE) {
             case P_BINTERNAL:
-                memmove(dest, bi, nbytes);
-                ((BINTERNAL *)dest)->pgno = rchild->nid;
+                tkey.size = bi->ksize;
+                tkey.data = bi->bytes;
                 break;
             case P_BLEAF:
-                WR_BINTERNAL_OLD(dest, nksize ? nksize : bl->ksize,
-                    rchild->nid, bl->flags & P_BIGKEY);
-                memmove(dest, bl->bytes, nksize ? nksize : bl->ksize);
                 assert(!(bl->flags & P_BIGKEY));
+                tkey.size = bl->ksize;
+                tkey.data = bl->bytes;
                 break;
             default:
                 abort();
             }
-		    /* Unpin the held pages. */
-            if(h->flags & P_DISK){
-			    Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
-            }
-            else{
-                DBT tkey;
-                assert(h->flags & P_MEM);
-                BINTERNAL* bl=(BINTERNAL*)((char *)h + h->linp[skip]);
-                tkey.size = bl->ksize;
-                tkey.data = bl->bytes;
-                //logpool_put(t,h->nid,&tkey,NULL,bl->pgno,LOG_INTERNAL | ADD_KEY);
-                node_addkey(t,h,&tkey,NULL,bl->pgno,0, 0);
-            }
-
+            node_addkey(t,h,&tkey,NULL,rchild->nid,skip,nbytes);
 			break;
 		} 
         /* === Case 2. Split the parent page === */
@@ -262,10 +234,10 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 			((BINTERNAL *)dest)->pgno = rchild->nid;
 			break;
 		case P_BLEAF:
-			WR_BINTERNAL_OLD(dest, nksize ? nksize : bl->ksize,
-			    rchild->nid, bl->flags & P_BIGKEY);
-			memmove(dest, bl->bytes, nksize ? nksize : bl->ksize);
             assert(!(bl->flags & P_BIGKEY));
+			WR_BINTERNAL_OLD(dest, bl->ksize,
+			    rchild->nid, bl->flags & P_BIGKEY);
+			memmove(dest, bl->bytes, bl->ksize);
 			break;
 		default:
 			abort();

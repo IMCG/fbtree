@@ -221,6 +221,7 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
         if( h->flags & P_DISK){
             dest = makeroom(h,index,nbytes);
             WR_BLEAF(dest, key, data, 0);
+            mpool_put(t->bt_mp,h,MPOOL_DIRTY);
         }
         else{
             assert(h->flags & P_MEM);
@@ -232,6 +233,7 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
         if( h->flags & P_DISK){
             dest = makeroom(h,index,nbytes);
             WR_BINTERNAL(dest, key, pgno, 0);
+            mpool_put(t->bt_mp,h,MPOOL_DIRTY);
         }
         else{
             assert(h->flags & P_MEM);
