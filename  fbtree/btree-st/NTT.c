@@ -69,6 +69,24 @@ void NTT_new(pgno_t nid, u_int32_t flags){
 }
 
 /**
+ * NTT_switch - switch node[nid]'s mode
+ * @nid - node id
+ */
+void NTT_switch(pgno_t nid){
+    NTTEntry * entry = NTT_get(nid);
+    NTT_del_list(entry);
+    entry->logversion ++;
+    entry->maxSeq = 0;
+    entry->pg_cnt = 0;
+    if (entry->flags & P_LOG)
+        entry->flags |= (P_DISK & ~(P_LOG));
+    else{
+        assert(entry->flags & P_DISK);
+        entry->flags |= (P_LOG & ~(P_DISK));
+    }
+}
+
+/**
  * NTT_free - free node[nid] in the NTT
  * @nid - node id
  */
@@ -76,7 +94,6 @@ void NTT_free(pgno_t nid){
     NTTEntry * entry = NTT_get(nid);
     NTT_del_list(entry);
     entry->flags = P_NOTUSED; 
-    entry->pg_cnt = 0;
 }
 /**
  * NTT_add_pgno - Add pgno to the sector list of NTT[nodeID]
@@ -117,8 +134,6 @@ void NTT_del_list(NTTEntry* entry){
        free(tmp);
     }
 #endif
-    entry->logversion = 0;
-    entry->maxSeq = 0;
     INIT_LIST_HEAD(&(entry->list.list));
 }
 

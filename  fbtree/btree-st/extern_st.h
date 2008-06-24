@@ -3,6 +3,7 @@ NTTEntry* NTT_get(pgno_t pgno);
 void NTT_init();
 void NTT_new(pgno_t nid, u_int32_t flags);
 void NTT_add_pgno(pgno_t nodeID, pgno_t pgno);
+void NTT_switch(pgno_t nid);
 void NTT_del_list(NTTEntry* entry);
 void NTT_dump();
 

@@ -111,7 +111,12 @@ void mem2log(BTREE* t, PAGE* pg)
     NTTEntry* e;
     DBT key,data;
 
-    assert(pg->flags & P_LMEM);
+    assert( (pg->flags & P_LMEM) || (pg->flags & P_DISK) );
+    if( pg->flags & P_DISK ){
+        NTT_switch(pg->nid);
+        pg->flags |= (P_LMEM & ~(P_DISK));
+    }
+
     assert(NEXTINDEX(pg)>0);
     err_debug(("~^Generate log entry from node %u",pg->nid));
 
@@ -137,6 +142,7 @@ void mem2log(BTREE* t, PAGE* pg)
             logpool_put(t,pg->nid,&key,&data,P_INVALID,ADD_KEY|LOG_LEAF);
         }
     }
+
         
     err_debug(("~$End Generate"));
 }

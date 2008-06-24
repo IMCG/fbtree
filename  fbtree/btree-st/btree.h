@@ -88,6 +88,7 @@ typedef struct _page {
 #define	P_BINTERNAL	0x01		/* btree internal page */
 #define	P_BLEAF		0x02		/* leaf page */
 
+#define P_DMEM       0x400        /* just a page in the memory, it is not mapped into a file */
 #define P_LMEM       0x40        /* just a page in the memory, it is not mapped into a file */
 #define P_LOG        0x80
 #define P_DISK       0x100
@@ -327,6 +328,12 @@ typedef struct _btree {
 	int	(*bt_cmp) __P((const DBT *, const DBT *));
 					/* B: prefix comparison function */
 	size_t	(*bt_pfx) __P((const DBT *, const DBT *));
+
+    double cw; //cost of write per page
+    double cr; //cost of read per page
+    u_int32_t node_size; //size of a node 
+    u_int32_t log_per_page; //max log entries a page can hold 
+    double C; // M1+M2
 
 /*
  * NB:

@@ -182,15 +182,11 @@ PAGE* read_node(BTREE* t , pgno_t x)
     return h;
 
 }
-#if 0
-double compute_delta(u_int32_t P, u_int32_t L, u_int32_t op )
+
+static double compute_delta(BTREE* t, u_int32_t P, u_int32_t L, u_int32_t op )
 {
-    u_int32_t x; /* cost of serving O in mode S1, LOG mode */
-    u_int32_t y; /* cost of serving O in mode S2, DISK mode */
-    double cw; //cost of write per page
-    double cr; //cost of read per page
-    u_int32_t node_size; //size of a node 
-    u_int32_t log_per_page; //max log entries a page can hold 
+    double x; /* cost of serving O in mode S1, LOG mode */
+    double y; /* cost of serving O in mode S2, DISK mode */
     
     if(op & READ){
         x = t->cr * P;
@@ -209,32 +205,32 @@ void switch_node(BTREE* t,  PAGE* h, u_int32_t op){
     NTTEntry* entry = NTT_get(h->nid);
     u_int32_t L = 2; //default value of L, L - the number of log entrie a write operation generate
     u_int32_t P = 3; //default value of P, P - the number of pages a LOG mode node span
+    double delta;
 
     /* current mode: DISK mode */
-    if( mode & P_DISK){
-        delta = compute_dealta(L,P,op);
+    if( h->flags & P_DISK){
+        delta = compute_delta(t,L,P,op);
         entry->f += delta;
         entry->f = (entry->f < 0) ? 0 : entry->f;
     }else{ /* current mode: LOG mode */
-        assert(mode & P_LMEM);
+        assert(h->flags & P_LMEM);
         if(op & WRITE){
             L = op & WHOLE_NODE ? NEXTINDEX(h): 1; 
         }
         P = entry->pg_cnt;
-        delta = compute_dealta(L,P,op);
+        delta = compute_delta(t,L,P,op);
         entry->f -= delta;
         entry->f = (entry->f < 0) ? 0 : entry->f;
     }
 
     /* migrate when > C */
-    if( entry->f > C){
-        diskmem2log();
+    if( entry->f > t->C){
+        mem2log(t,h);
     }else{
-        mem2disk();
+        //mem2disk();
     }
 
 }
-#endif
 /**
  * node_addkey - Add Key to  a node
  * 
