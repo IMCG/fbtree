@@ -231,11 +231,11 @@ __bt_defcmp(a, b)
 	return ((int)a->size - (int)b->size);
 }
 
-/* Mpool_put - the same with Mpool_put except that it will check wheter page is just P_MEM first */
+/* Mpool_put - the same with Mpool_put except that it will check wheter page is just P_LMEM first */
 int Mpool_put( MPOOL *mp, void *page, u_int flags)
 {
 
-    if( ((PAGE*)page)->flags &  P_MEM ){
+    if( ((PAGE*)page)->flags &  P_LMEM ){
 	    return (RET_SUCCESS);
     }
     return mpool_put( mp, page, flags);

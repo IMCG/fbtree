@@ -98,12 +98,12 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key,const DBT* data, pgno_t 
     return pgno_logbuf;
 }
 /**
- * genLogFromNode - generate log entries from a disk mode node AND put them into log buffer.
+ * mem2log - generate log entries from a MEM mode node AND put them into log buffer.
  * @pg: the node's page header
  *
  * we convert the real node into a set of log entries
  */
-void genLogFromNode(BTREE* t, PAGE* pg)
+void mem2log(BTREE* t, PAGE* pg)
 {
     unsigned int i;
     BINTERNAL* bi=NULL;
@@ -111,7 +111,7 @@ void genLogFromNode(BTREE* t, PAGE* pg)
     NTTEntry* e;
     DBT key,data;
 
-    assert(pg->flags & P_MEM);
+    assert(pg->flags & P_LMEM);
     assert(NEXTINDEX(pg)>0);
     err_debug(("~^Generate log entry from node %u",pg->nid));
 

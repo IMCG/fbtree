@@ -114,8 +114,8 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	h->linp[skip] = h->upper -= ilen;
 	dest = (char *)h + h->upper;
 	WR_BLEAF(dest, key, data, flags)
-    if(h->flags & P_MEM){
-        genLogFromNode(t,h); 
+    if(h->flags & P_LMEM){
+        mem2log(t,h); 
     }
 	/* If the root page was split, make it look right. */
 	if (sp->nid == P_ROOT &&
@@ -248,8 +248,8 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		    bt_broot(t, sp, l, r) == RET_ERROR)
 			goto err1;
 
-        if( h->flags & P_MEM ){
-            genLogFromNode(t,h);
+        if( h->flags & P_LMEM ){
+            mem2log(t,h);
         }
 
 		//Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
@@ -396,15 +396,15 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 	memmove(h, l, t->bt_psize);
 	if (tp == l){
 		tp = h;
-        if(r->flags & P_MEM){
+        if(r->flags & P_LMEM){
             err_debug(("gen for left")); 
-            genLogFromNode(t,r);
+            mem2log(t,r);
         }
     }
     else{  /* tp==r  */
-        if(h->flags & P_MEM){
+        if(h->flags & P_LMEM){
             err_debug(("gen for left")); 
-            genLogFromNode(t,h);
+            mem2log(t,h);
         }
     }
 	free(l);
@@ -458,13 +458,13 @@ bt_root(t, h, lp, rp, skip, ilen)
 	*lp = l;
 	*rp = r;
 	if (tp == l){
-        if(r->flags & P_MEM)
-            genLogFromNode(t,r);
+        if(r->flags & P_LMEM)
+            mem2log(t,r);
     }
     else{  /* tp==r  */
         assert(tp==r);
-        if(l->flags & P_MEM)
-            genLogFromNode(t,l);
+        if(l->flags & P_LMEM)
+            mem2log(t,l);
     }
 
 	return (tp);
@@ -547,9 +547,9 @@ bt_broot(t, h, l, r)
 	/* Unpin the root page, set to btree internal page. */
 	h->flags &= ~P_TYPE;
 	h->flags |= P_BINTERNAL;
-    if(h->flags & P_MEM){
-        assert(h->flags & P_MEM);
-        genLogFromNode(t,h);
+    if(h->flags & P_LMEM){
+        assert(h->flags & P_LMEM);
+        mem2log(t,h);
     }
 	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 	return (RET_SUCCESS);

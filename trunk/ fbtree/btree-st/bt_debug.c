@@ -173,7 +173,7 @@ __bt_dpage(h)
 	X(P_OVERFLOW,	"OVERFLOW")
 	X(P_PRESERVE,	"PRESERVE");
 	X(P_LOG,	"P_LOG");
-	X(P_MEM,	"P_MEM");
+	X(P_LMEM,	"P_LMEM");
 	X(P_DISK,	"P_DISK");
 	(void)fprintf(stderr, ")\n");
 #undef X

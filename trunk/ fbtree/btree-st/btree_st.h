@@ -5,6 +5,15 @@
 #include <assert.h>
 
 /* ----
+ * = Section 0. Defintion of OP =
+ * ----
+ *  used in function switch node
+ */
+#define READ 0x01
+#define WRITE 0x02
+#define WHOLE_NODE 0x04  // generate log entries from a whole node
+
+/* ----
  * = Section 1. Node Translation Table =
  * ----
  */
@@ -22,6 +31,7 @@ typedef struct _NTTentry{
     u_int32_t   logversion;
     u_int32_t   maxSeq;
     u_int32_t   flags;        /* Note: clear P_NOTUSED when set others!!! */
+    u_int32_t   pg_cnt;       /* size of the sector list */
     u_int32_t   f;            /* Accumulated difference of costs of the two mode since last mode switch */
     SectorList  list;
 }NTTEntry;
