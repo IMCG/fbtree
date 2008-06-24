@@ -39,7 +39,12 @@ static int tmp __P((void));
  */
 static device_config(BTREE* t)
 {
-    
+    double cw; //cost of write per page
+    double cr; //cost of read per page
+    u_int32_t node_size; //size of a node 
+    u_int32_t log_per_page; //max log entries a page can hold 
+    double C; // M1+M2
+   
 
 }
 /*
