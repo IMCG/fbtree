@@ -17,6 +17,7 @@ void NTT_init(){
     for(i=1; i<NTT_MAXSIZE; i++){
         NTT[i].flags = P_NOTUSED;
         NTT[i].logversion = 0;
+        NTT[i].pg_cnt = 0;
     }
 }
 /**
@@ -48,7 +49,7 @@ void NTT_new(pgno_t nid, u_int32_t flags){
     if(flags & P_DISK){
         entry->flags |= P_DISK;
     }else{
-        assert(flags & P_MEM);
+        assert(flags & P_LMEM);
         entry->flags |= P_LOG ;
     }
 
@@ -75,6 +76,7 @@ void NTT_free(pgno_t nid){
     NTTEntry * entry = NTT_get(nid);
     NTT_del_list(entry);
     entry->flags = P_NOTUSED; 
+    entry->pg_cnt = 0;
 }
 /**
  * NTT_add_pgno - Add pgno to the sector list of NTT[nodeID]
@@ -102,6 +104,7 @@ void NTT_add_pgno(pgno_t nodeID, pgno_t pgno){
     if(nslist==NULL)    err_sys("error while malloc sector list: %s",err_loc);
     nslist->pgno = pgno;
     list_add(&(nslist->list),&(slist->list));
+    entry->pg_cnt++;
 }
 /**
  * delete sector list of the NTTEntry *entry*, and reset NTT

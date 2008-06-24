@@ -233,7 +233,7 @@ __bt_pdelete( BTREE *t, PAGE *h)
             key.size = bi->ksize;
             key.data = bi->bytes;
             /* FIXME: what about the same key ? */
-            if(pg->flags & P_MEM)
+            if(pg->flags & P_LMEM)
                 logpool_put(t,pg->nid, &key ,NULL, bi->pgno ,DELETE_KEY| P_BINTERNAL);
             shrinkroom(pg, index, nksize);
 		}
@@ -278,7 +278,7 @@ __bt_dleaf( BTREE *t, const DBT *key, PAGE *h, u_int index)
 	nbytes = NBLEAF(bl);
     shrinkroom(h,index,nbytes);
 
-    if(h->flags & P_MEM){
+    if(h->flags & P_LMEM){
         logpool_put(t,h->nid,key,NULL,P_INVALID,DELETE_KEY| P_BLEAF);
     }
 

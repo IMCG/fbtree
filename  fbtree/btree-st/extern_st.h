@@ -24,7 +24,7 @@ PAGE* read_node(BTREE* mp , pgno_t x);
 
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
 
-void genLogFromNode(BTREE* t, PAGE* pg);
+void mem2log(BTREE* t, PAGE* pg);
 int free_node(BTREE* t, PAGE* h);
 
 /* Other Operation */

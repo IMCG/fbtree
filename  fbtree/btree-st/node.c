@@ -112,7 +112,7 @@ static PAGE* new_node_mem(BTREE* t, pgno_t nid, u_char type )
 	h->prevpg = P_INVALID;
 	h->lower  = BTDATAOFF;
 	h->upper  = t->bt_psize;
-    h->flags = type | P_MEM;
+    h->flags = type | P_LMEM;
     return h;
 }
 
@@ -182,28 +182,63 @@ PAGE* read_node(BTREE* t , pgno_t x)
     return h;
 
 }
-
 #if 0
-void switch_node(BTREE* t,  u_int32_t op, u_int32_t type  ){
-    u_int32_t c1; /* cost of serving O in current mode */
-    u_int32_t c2; /* cost of serving O in the other mode */
-    /* current mode: Disk mode */
-    if(flags & )
-    /* write */
-    if()
-    c1 = t->cw * t->node_size;  
-    c2 = 
+double compute_delta(u_int32_t P, u_int32_t L, u_int32_t op )
+{
+    u_int32_t x; /* cost of serving O in mode S1, LOG mode */
+    u_int32_t y; /* cost of serving O in mode S2, DISK mode */
+    double cw; //cost of write per page
+    double cr; //cost of read per page
+    u_int32_t node_size; //size of a node 
+    u_int32_t log_per_page; //max log entries a page can hold 
+    
+    if(op & READ){
+        x = t->cr * P;
+        y = t->cr * t->node_size; 
+    }else{
+        assert(op & WRITE);
+        x = t->cw * L / t->log_per_page; 
+        y = t->cw * t->node_size; 
+    }
 
-    /* current mode: Log mode */
-    /* write */
-    c1 = t->cw * l  / t->log_per_page
+    return x-y;
+}
+
+void switch_node(BTREE* t,  PAGE* h, u_int32_t op){
+    
+    NTTEntry* entry = NTT_get(h->nid);
+    u_int32_t L = 2; //default value of L, L - the number of log entrie a write operation generate
+    u_int32_t P = 3; //default value of P, P - the number of pages a LOG mode node span
+
+    /* current mode: DISK mode */
+    if( mode & P_DISK){
+        delta = compute_dealta(L,P,op);
+        entry->f += delta;
+        entry->f = (entry->f < 0) ? 0 : entry->f;
+    }else{ /* current mode: LOG mode */
+        assert(mode & P_LMEM);
+        if(op & WRITE){
+            L = op & WHOLE_NODE ? NEXTINDEX(h): 1; 
+        }
+        P = entry->pg_cnt;
+        delta = compute_dealta(L,P,op);
+        entry->f -= delta;
+        entry->f = (entry->f < 0) ? 0 : entry->f;
+    }
+
+    /* migrate when > C */
+    if( entry->f > C){
+        diskmem2log();
+    }else{
+        mem2disk();
+    }
+
 }
 #endif
-
 /**
  * node_addkey - Add Key to  a node
  * 
- * @h: the node - ({P_MEM|P_DISK},{P_BINTERNAL|P_BLEAF})
+ * @h: the node - ({P_LMEM|P_DISK},{P_BINTERNAL|P_BLEAF})
  * @key
  * @data: NULL for BINTERNAL node
  * @pgno: P_INVALID for BLEAF node
@@ -224,7 +259,7 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
             mpool_put(t->bt_mp,h,MPOOL_DIRTY);
         }
         else{
-            assert(h->flags & P_MEM);
+            assert(h->flags & P_LMEM);
             logpool_put(t,h->nid,key,data,P_INVALID, ADD_KEY | LOG_LEAF );
         }
     }else{
@@ -236,7 +271,7 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
             mpool_put(t->bt_mp,h,MPOOL_DIRTY);
         }
         else{
-            assert(h->flags & P_MEM);
+            assert(h->flags & P_LMEM);
             logpool_put(t,h->nid,key,data,pgno, ADD_KEY | LOG_INTERNAL );
         }
     }
@@ -345,13 +380,13 @@ PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t type)
     }
     else{
 #endif
-        //assert(flags & P_MEM);
+        //assert(flags & P_LMEM);
         h = (PAGE*)malloc(t->bt_psize);
         if(h==NULL){
             err_sys("can't malloc new node");
         }
         npg = *nid;
-        h->flags = P_MEM; 
+        h->flags = P_LMEM; 
 //    }
 
     assert(h!=NULL);
@@ -377,7 +412,7 @@ int free_node(BTREE* t, PAGE* h)
     if(h->flags & P_DISK){
         __bt_free(t,h);
     }else{
-        assert(h->flags & P_MEM);
+        assert(h->flags & P_LMEM);
         free(h);
     }
 

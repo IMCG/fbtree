@@ -88,9 +88,10 @@ typedef struct _page {
 #define	P_BINTERNAL	0x01		/* btree internal page */
 #define	P_BLEAF		0x02		/* leaf page */
 
-#define P_MEM       0x40        /* just a page in the memory, it is not mapped into a file */
+#define P_LMEM       0x40        /* just a page in the memory, it is not mapped into a file */
 #define P_LOG        0x80
 #define P_DISK       0x100
+
 
 #define P_NOTUSED    0x200    /* flags are also used to check whether is it valid node */
 
