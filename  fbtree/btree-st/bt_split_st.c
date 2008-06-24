@@ -115,7 +115,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	dest = (char *)h + h->upper;
 	WR_BLEAF(dest, key, data, flags)
     if(h->flags & P_LMEM){
-        mem2log(t,h); 
+        node_tolog(t,h); 
     }
 	/* If the root page was split, make it look right. */
 	if (sp->nid == P_ROOT &&
@@ -249,7 +249,7 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 			goto err1;
 
         if( h->flags & P_LMEM ){
-            mem2log(t,h);
+            node_tolog(t,h);
         }
 
 		//Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
@@ -398,13 +398,13 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 		tp = h;
         if(r->flags & P_LMEM){
             err_debug(("gen for left")); 
-            mem2log(t,r);
+            node_tolog(t,r);
         }
     }
     else{  /* tp==r  */
         if(h->flags & P_LMEM){
             err_debug(("gen for left")); 
-            mem2log(t,h);
+            node_tolog(t,h);
         }
     }
 	free(l);
@@ -459,12 +459,12 @@ bt_root(t, h, lp, rp, skip, ilen)
 	*rp = r;
 	if (tp == l){
         if(r->flags & P_LMEM)
-            mem2log(t,r);
+            node_tolog(t,r);
     }
     else{  /* tp==r  */
         assert(tp==r);
         if(l->flags & P_LMEM)
-            mem2log(t,l);
+            node_tolog(t,l);
     }
 
 	return (tp);
@@ -551,7 +551,7 @@ bt_broot(t, h, l, r)
 	h->flags &= ~P_TYPE;
 	h->flags |= P_BINTERNAL;
     if(h->flags & P_LMEM){
-        mem2log(t,h);
+        node_tolog(t,h);
     }
 	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 	return (RET_SUCCESS);

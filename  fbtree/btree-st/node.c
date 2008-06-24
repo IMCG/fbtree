@@ -179,6 +179,8 @@ PAGE* read_node(BTREE* t , pgno_t x)
         err_quit("error: node[%d], flags=%x: unkown mode: %s", x, entry->flags, err_loc);
         h = NULL;
     }
+
+    if(h!=NULL) switch_node(t,h,READ);
     return h;
 
 }
@@ -200,7 +202,8 @@ static double compute_delta(BTREE* t, u_int32_t P, u_int32_t L, u_int32_t op )
     return x-y;
 }
 
-PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op){
+PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op)
+{
     
     NTTEntry* entry = NTT_get(h->nid);
     u_int32_t L = 2; //default value of L, L - the number of log entrie a write operation generate
@@ -214,6 +217,7 @@ PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op){
         entry->f = (entry->f < 0) ? 0 : entry->f;
         
         if( entry->f > t->C ){
+            //printf("haha");
             h = mem2log(t,h);
         }
     }else{ /* current mode: LOG mode */
@@ -227,6 +231,7 @@ PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op){
         entry->f = (entry->f < 0) ? 0 : entry->f;
         /* migrate when > C */
         if( entry->f > t->C){
+            //printf("haha");
             h = mem2disk(t,h);
         }
     }
@@ -249,7 +254,7 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
 {
     char * dest=NULL;
 
-    //switch_node(t,h,WRITE);
+    switch_node(t,h,WRITE);
     if(h->flags & P_BLEAF){
         assert(pgno==P_INVALID);
         if( h->flags & P_DISK){
@@ -276,7 +281,18 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
     }
 
 }
+/*
+ * generate log entry from a node
+ */
+void node_tolog(BTREE* t, PAGE*h)
+{
+    h = switch_node( t,h,WRITE | WHOLE_NODE);
+    if(h->flags & P_DISK)
+        Mpool_put(t->bt_mp,h, MPOOL_DIRTY);
+    else
+        mem2log(t,h);
 
+}
 /**
  * search_node - search the node h to find proper position to insert
  * @h: node page lister
