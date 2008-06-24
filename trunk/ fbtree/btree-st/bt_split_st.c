@@ -525,8 +525,11 @@ bt_broot(t, h, l, r)
 #ifdef NTT_DEBUG
         err_debug(("Change root into (INTERNAL|LOG)"));
 #endif
-        entry->flags = P_BINTERNAL | P_LOG;
         NTT_del_list(entry);
+        entry->flags = P_BINTERNAL | P_LOG;
+        entry->logversion ++;
+        entry->maxSeq = 0;
+        entry->pg_cnt = 0;
 
         assert(!(bl->flags & P_BIGKEY));
 	case P_BINTERNAL:
@@ -548,7 +551,6 @@ bt_broot(t, h, l, r)
 	h->flags &= ~P_TYPE;
 	h->flags |= P_BINTERNAL;
     if(h->flags & P_LMEM){
-        assert(h->flags & P_LMEM);
         mem2log(t,h);
     }
 	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
