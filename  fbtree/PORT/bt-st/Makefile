@@ -7,7 +7,7 @@ OBJ2=	bt_close.o bt_conv.o bt_debug.o bt_get_st.o bt_open.o \
 	bt_utils.o bt_delete.o
 OBJ3=	db.o
 OBJ4=	mpool.o
-OBJ5=	error.o errorlog.o NTT.o log.o node.o
+OBJ5=	error.o errorlog.o NTT.o log.o node.o switch.o
 
 MISC=
 
@@ -73,6 +73,8 @@ log.o: ../../btree-st/log.c
 	${CL} -I../../btree-st ../../btree-st/log.c
 node.o: ../../btree-st/node.c
 	${CL} -I../../btree-st ../../btree-st/node.c
+switch.o: ../../btree-st/switch.c
+	${CL} -I../../btree-st ../../btree-st/switch.c
 
 memmove.o:
 	${CC} -DMEMMOVE -c -O -I. -Iinclude clib/memmove.c

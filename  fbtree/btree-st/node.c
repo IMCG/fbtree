@@ -200,7 +200,7 @@ static double compute_delta(BTREE* t, u_int32_t P, u_int32_t L, u_int32_t op )
     return x-y;
 }
 
-void switch_node(BTREE* t,  PAGE* h, u_int32_t op){
+PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op){
     
     NTTEntry* entry = NTT_get(h->nid);
     u_int32_t L = 2; //default value of L, L - the number of log entrie a write operation generate
@@ -212,6 +212,10 @@ void switch_node(BTREE* t,  PAGE* h, u_int32_t op){
         delta = compute_delta(t,L,P,op);
         entry->f += delta;
         entry->f = (entry->f < 0) ? 0 : entry->f;
+        
+        if( entry->f > t->C ){
+            h = mem2log(t,h);
+        }
     }else{ /* current mode: LOG mode */
         assert(h->flags & P_LMEM);
         if(op & WRITE){
@@ -221,15 +225,13 @@ void switch_node(BTREE* t,  PAGE* h, u_int32_t op){
         delta = compute_delta(t,L,P,op);
         entry->f -= delta;
         entry->f = (entry->f < 0) ? 0 : entry->f;
+        /* migrate when > C */
+        if( entry->f > t->C){
+            h = mem2disk(t,h);
+        }
     }
 
-    /* migrate when > C */
-    if( entry->f > t->C){
-        mem2log(t,h);
-    }else{
-        //mem2disk();
-    }
-
+    return h;
 }
 /**
  * node_addkey - Add Key to  a node
@@ -247,6 +249,7 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
 {
     char * dest=NULL;
 
+    //switch_node(t,h,WRITE);
     if(h->flags & P_BLEAF){
         assert(pgno==P_INVALID);
         if( h->flags & P_DISK){
