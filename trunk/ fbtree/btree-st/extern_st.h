@@ -20,9 +20,11 @@ pgno_t logpool_put(BTREE* t, pgno_t nid, const DBT* key, const DBT* data, pgno_t
 
 /* node operation */
 void node_addkey(BTREE* t, PAGE* h, const DBT* key, const DBT* data, pgno_t pgno, indx_t index, u_int32_t nbytes);
+void node_tolog(BTREE* t, PAGE*h);
 PAGE * new_node( BTREE *t, pgno_t* nid ,u_int32_t flags);
 PAGE* read_node(BTREE* mp , pgno_t x);
 
+PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op);
 indx_t search_node( PAGE * h, u_int32_t ksize, char bytes[]);
 
 PAGE* mem2log(BTREE* t, PAGE* pg);
