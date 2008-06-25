@@ -184,14 +184,12 @@ mpool_get(mp, pgno, flags)
 	/* Check for a page that is cached. */
 	if ((bp = mpool_look(mp, pgno)) != NULL) {
         /* IMHO: the code is not necessary */
-#if 0
 #ifdef DEBUG
 		if (bp->flags & MPOOL_PINNED) {
 			(void)fprintf(stderr,
 			    "mpool_get: page %d already pinned\n", bp->pgno);
 			abort();
 		}
-#endif
 #endif
         
 		/*
