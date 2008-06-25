@@ -77,6 +77,7 @@ void NTT_switch(pgno_t nid){
     NTTEntry * entry = NTT_get(nid);
     NTT_del_list(entry);
     entry->maxSeq = 0;
+    entry->f = 0;
     entry->pg_cnt = 0;
     if (entry->flags & P_LOG){
         entry->flags = (entry->flags & P_TYPE) | P_DISK;

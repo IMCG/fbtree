@@ -189,8 +189,12 @@ PAGE* read_node(BTREE* t , pgno_t x)
         h = NULL;
     }
 
+
+    //err_debug1("before"); 
     //__bt_dpage(h);
-    //if(h!=NULL) h = switch_node(t,h,READ);
+    if(h!=NULL) h = switch_node(t,h,READ);
+    //err_debug1("after"); 
+    //__bt_dpage(h);
     return h;
 
 }
