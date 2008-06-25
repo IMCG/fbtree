@@ -27,7 +27,7 @@ void NTT_init(){
  */
 NTTEntry* NTT_get(pgno_t pgno){
     //const char* err_loc = "function (NTT_get) in NTT.c";
-    err_debug1("pgno = %u", pgno);
+    //err_debug1("pgno = %u", pgno);
     assert( pgno > 0 && pgno<= NTT_MAXSIZE);
 
     return &NTT[pgno];

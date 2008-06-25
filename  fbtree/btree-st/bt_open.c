@@ -45,7 +45,7 @@ static device_config(BTREE* t)
     t->node_size = 1;
     t->log_per_page = (t->bt_psize- BTDATAOFF) / (sizeof(BLOG) -1 + 4 ) ;
     N = (t->bt_psize-BTDATAOFF) / (sizeof(BINTERNAL)-1 + 4 );
-    t->C = t->cw * ( t->node_size + (0.69*N+1) /t->log_per_page) ;
+    t->C = t->cw * ( t->node_size + (0.69*N+1) / t->log_per_page) ;
 }
 /*
  * __BT_OPEN -- Open a btree.

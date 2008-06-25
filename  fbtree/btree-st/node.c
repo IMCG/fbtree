@@ -190,7 +190,7 @@ PAGE* read_node(BTREE* t , pgno_t x)
     }
 
     //__bt_dpage(h);
-    if(h!=NULL) h = switch_node(t,h,READ);
+    //if(h!=NULL) h = switch_node(t,h,READ);
     return h;
 
 }
@@ -223,7 +223,7 @@ PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op)
     /* current mode: DISK mode */
     if( h->flags & P_DISK){
         delta = compute_delta(t,L,P,op);
-        entry->f += delta;
+        entry->f -= delta;
         entry->f = (entry->f < 0) ? 0 : entry->f;
         
         if( entry->f > t->C ){
@@ -237,7 +237,7 @@ PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op)
         }
         P = entry->pg_cnt;
         delta = compute_delta(t,L,P,op);
-        entry->f -= delta;
+        entry->f += delta;
         entry->f = (entry->f < 0) ? 0 : entry->f;
         /* migrate when > C */
         if( entry->f > t->C){
