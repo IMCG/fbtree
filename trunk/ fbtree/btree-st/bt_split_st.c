@@ -114,9 +114,14 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	dest = (char *)h + h->upper;
 	WR_BLEAF(dest, key, data, flags)
     if(h->flags & P_LMEM){
-        h = node_tolog(t,h); 
+        if( h == l){
+            l = h = node_tolog(t,h); 
+        }
+        else{
+            assert(h==r);
+            r = h = node_tolog(t,h); 
+        }
     }
-    Mpool_put(t->bt_mp,h,MPOOL_DIRTY);
 
 	/* If the root page was split, make it look right. */
 	if (sp->nid == P_ROOT &&
@@ -248,20 +253,30 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 		if (sp->nid == P_ROOT &&
 		    bt_broot(t, sp, l, r) == RET_ERROR)
 			goto err1;
-
-        if( h->flags & P_LMEM ){
-            h = node_tolog(t,h);
+        
+        if(h->flags & P_LMEM){
+            if( h == l){
+                l = h = node_tolog(t,h); 
+            }
+            else{
+                assert(h==r);
+                r = h = node_tolog(t,h); 
+            }
         }
-		Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+
+		//Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 
 		//Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
 		//Mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
+		Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
+		Mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
+
         err_debug(("-^End update", parent->pgno)); 
 	}
 
 	/* Unpin the held pages. */
-	//Mpool_put(t->bt_mp, l, MPOOL_DIRTY);
-	//Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, l, MPOOL_DIRTY);
+	Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
 
 	/* Clear any pages left on the stack. */
     BT_CLR(t);
@@ -401,14 +416,12 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
             err_debug(("gen for left")); 
             r = node_tolog(t,r);
         }
-		Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
     }
     else{  /* tp==r  */
         if(h->flags & P_LMEM){
             err_debug(("gen for left")); 
             h = node_tolog(t,h);
         }
-		Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
     }
 	free(l);
 
@@ -457,18 +470,16 @@ bt_root(t, h, lp, rp, skip, ilen)
 	tp = bt_psplit(t, h, l, r, skip, ilen);
 
 
-	*lp = l;
-	*rp = r;
 	if (tp == l){
         if(r->flags & P_LMEM) r = node_tolog(t,r);
-		Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
     }
     else{  /* tp==r  */
         assert(tp==r);
         if(l->flags & P_LMEM) l = node_tolog(t,l);
-		Mpool_put(t->bt_mp, l, MPOOL_DIRTY);
     }
 
+	*lp = l;
+	*rp = r;
 	return (tp);
 }
 

@@ -66,8 +66,8 @@ void testInsert(){
     data.data=buf;
 
 	//for (i=0; i<config.BTrecordnum;i++) {
-	for (i=0; i<config.BTrecordnum;i++) {
-        rd=0;
+	for (i=0; i<30000;i++) {
+      rd=0;
 	  fscanf(fp,"%lld",&ibuf);
 
       key.size = 8;
