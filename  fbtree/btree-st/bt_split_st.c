@@ -98,9 +98,12 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	 * are pinned.
 	 */
     /* h is page to insert data */
-	h = sp->nid== P_ROOT ?
-	    bt_root(t, sp, &l, &r, &skip, ilen) :
-	    bt_page(t, sp, &l, &r, &skip, ilen);
+    if(sp->nid == P_ROOT){
+	    h = bt_root(t, sp, &l, &r, &skip, ilen);
+    }else{
+	    h = bt_page(t, sp, &l, &r, &skip, ilen);
+        sp = l;//sp指向的指针变化了，太ugly了，逼得我用中文了
+    }
 	if (h == NULL)
 		return (RET_ERROR);
 
@@ -115,7 +118,10 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 	WR_BLEAF(dest, key, data, flags)
     if(h->flags & P_LMEM){
         if( h == l){
-            l = h = node_tolog(t,h); 
+            if(sp->nid == P_ROOT)
+                l = h = node_tolog(t,h);
+            else
+                sp= l = h = node_tolog(t,h);
         }
         else{
             assert(h==r);
@@ -224,9 +230,13 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
         /* === Case 2. Split the parent page === */
         err_debug(("split the parent page"));    
         sp = h;
-        h = h->nid== P_ROOT ?
-            bt_root(t, h, &l, &r, &skip, nbytes) :
-            bt_page(t, h, &l, &r, &skip, nbytes);
+        
+        if(sp->nid == P_ROOT){
+            h = bt_root(t, sp, &l, &r, &skip, nbytes);
+        }else{
+            h = bt_page(t, sp, &l, &r, &skip, nbytes);
+            sp = l;
+        }
         if (h == NULL)
             goto err1;
 
@@ -249,20 +259,23 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 			abort();
 		}
 
-		/* If the root page was split, make it look right. */
-		if (sp->nid == P_ROOT &&
-		    bt_broot(t, sp, l, r) == RET_ERROR)
-			goto err1;
         
         if(h->flags & P_LMEM){
             if( h == l){
-                l = h = node_tolog(t,h); 
+                if(sp->nid == P_ROOT)
+                    l = h = node_tolog(t,h); 
+                else    
+                    sp = l = h = node_tolog(t,h); 
             }
             else{
                 assert(h==r);
                 r = h = node_tolog(t,h); 
             }
         }
+		/* If the root page was split, make it look right. */
+		if (sp->nid == P_ROOT &&
+		    bt_broot(t, sp, l, r) == RET_ERROR)
+			goto err1;
 
 		//Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 
