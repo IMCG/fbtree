@@ -76,6 +76,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
          * TODO: what about this condition for log mode ?
 		 */
 		if (h->flags & P_BLEAF) {
+#if 0
 			if (!F_ISSET(t, B_NODUPS)) {
 				if (base == 0 &&
 				    h->prevpg != P_INVALID &&
@@ -88,6 +89,7 @@ __bt_search_st(BTREE *t,const DBT *key,int *exactp)
                     err_debug(("End Search\n"));
 					return (&t->bt_cur);
 			}
+#endif
 			*exactp = 0;
 			t->bt_cur.index = base;
             err_debug(("End Search"));

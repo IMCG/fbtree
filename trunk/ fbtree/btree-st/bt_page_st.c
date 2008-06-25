@@ -66,8 +66,11 @@ __bt_free(t, h)
 	h->nextpg = t->bt_free;
 	t->bt_free = h->pgno;
 
+#ifdef MPOOL_DEBUG
+        err_debug(("free page %ud into the freelist",h->pgno));
+#endif
 	/* Make sure the page gets written back. */
-	return (Mpool_put(t->bt_mp, h, MPOOL_DIRTY));
+	return (mpool_put(t->bt_mp, h, MPOOL_DIRTY));
 }
 
 /*
@@ -86,6 +89,7 @@ PAGE *
 __bt_new( BTREE *t, pgno_t *npg)
 {
 	PAGE *h;
+#if 0
 	if (t->bt_free != P_INVALID &&
 	    (h = mpool_get(t->bt_mp, t->bt_free, 0)) != NULL) {
 		*npg = t->bt_free;
@@ -97,6 +101,9 @@ __bt_new( BTREE *t, pgno_t *npg)
     else{
 	    h= mpool_new(t->bt_mp, npg);
     }
+#endif
+	    
+    h= mpool_new(t->bt_mp, npg);
     /* @mx 
      * In the original version, the function don't initialize h.
      * IMHO, it's not a good design, since some initial value can be default

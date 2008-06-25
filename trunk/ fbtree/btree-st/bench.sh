@@ -8,6 +8,6 @@ rm bench
 rm btrecord
 rm *.o
 make -f Makefile.bench
-gprof ./bench > /tmp/bench
-#./bench &> /tmp/bench
+#gprof ./bench > /tmp/bench
+./bench &> /tmp/bench
 tail /tmp/bench

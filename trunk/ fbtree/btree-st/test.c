@@ -68,12 +68,12 @@ void testBT(){
 
     //NTT_dump();
     for( i = 0 ; i<30000 ; i++){
-        //err_debug1("\n----\ni=%d\n",i);
+        err_debug1("\n----\ni=%d\n",i);
         //k = (u_int32_t)i;
         //d = (u_int32_t)i*i;
 
 	    fscanf(fp,"%u%u",&k,&d);
-        //err_debug1("= BEGIN PUT (%d,%d) =", *(int*)key.data,*(int*)data.data);
+        err_debug1("= BEGIN PUT (%d,%d) =", *(int*)key.data,*(int*)data.data);
         rc = dbp->put(dbp, &key, &data, R_NOOVERWRITE);
         
         
@@ -90,7 +90,7 @@ void testBT(){
         rdata.size=0;
         rdata.data=NULL;
 
-        //err_debug1("\n= BEGIN GETT (%d,?) =", *(int*)rkey.data);
+        err_debug1("\n= BEGIN GET (%d,?) =", *(int*)rkey.data);
         rc = dbp->get(dbp,&rkey,&rdata,0);
         if(rc==-1){
             err_quit("error while try to get ");

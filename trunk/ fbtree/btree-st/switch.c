@@ -9,13 +9,19 @@ PAGE* mem2disk(BTREE* t, PAGE* pg)
 {
     PAGE* npg;
     u_int32_t npgno;
-    assert( !(pg->flags & P_DISK) ); // we needn't convert if it's P_DISK already
-    pg->flags |= (P_LMEM & ~(P_DISK));
-    NTT_switch(pg->nid);
+	assert(pg->flags & P_LMEM);
+
     npg = __bt_new(t,&npgno);
     memmove(npg,pg, t->bt_psize);
     npg->pgno = npgno;
+    npg->flags = (pg->flags & P_TYPE) | P_DISK;
+    
+    NTT_switch(npg->nid);
+    NTT_add_pgno(npg->nid,npg->pgno);
     free(pg);
+    Mpool_put(t->bt_mp,npg,MPOOL_DIRTY);
+    npg = mpool_get(t->bt_mp,npgno,0);
+    
     return npg;
 
 }
@@ -32,20 +38,31 @@ PAGE* mem2log(BTREE* t, PAGE* pg)
     BLEAF* bl=NULL;
     NTTEntry* e;
     DBT key,data;
+    indx_t nxtidx;
+	PAGE* npg;
 
     assert( (pg->flags & P_LMEM) || (pg->flags & P_DISK) );
     if( pg->flags & P_DISK ){
-        NTT_switch(pg->nid);
-        pg->flags |= (P_LMEM & ~(P_DISK));
-    }
+		
+        npg = (PAGE*)malloc(t->bt_psize);
+		memmove(npg,pg, t->bt_psize);
+		npg->pgno = P_INVALID;
+        npg->flags = (pg->flags & P_TYPE) | P_LMEM;
 
-    assert(NEXTINDEX(pg)>0);
+		NTT_switch(npg->nid);
+		__bt_free(t,pg); // NOTE: bt_free won't free pg if pg is set to P_LMEM
+        pg = npg;
+    }
+    nxtidx = NEXTINDEX(pg);
+    if( nxtidx==0 ){
+        return pg;
+    }
     err_debug(("~^Generate log entry from node %u",pg->nid));
 
     e = NTT_get(pg->nid);
     e->logversion++;
     if(pg->flags & P_BINTERNAL){
-        for (i=0; i<NEXTINDEX(pg); i++){
+        for (i=0; i<nxtidx; i++){
             bi = GETBINTERNAL(pg,i);
             assert(bi!=NULL);
             key.size = bi->ksize;
@@ -54,7 +71,7 @@ PAGE* mem2log(BTREE* t, PAGE* pg)
         }
     }else{
         assert(pg->flags & P_BLEAF);
-        for (i=0; i<NEXTINDEX(pg); i++){
+        for (i=0; i<nxtidx; i++){
             bl = GETBLEAF(pg,i);
             assert(bl!=NULL);
             key.size = bl->ksize;

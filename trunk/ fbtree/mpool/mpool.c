@@ -146,7 +146,9 @@ mpool_new(mp, pgnoaddr)
 	CIRCLEQ_INSERT_HEAD(head, bp, hq);
 	CIRCLEQ_INSERT_TAIL(&mp->lqh, bp, q);
 
-	//err_debug(("mpool-new page %ud",bp->pgno));
+#ifdef MPOOL_DEBUG
+	err_debug(("mpool-new page %ud",bp->pgno));
+#endif
     return (bp->page);
 }
 
@@ -165,7 +167,9 @@ mpool_get(mp, pgno, flags)
 	off_t off;
 	int nr;
 
-    //err_debug(("mpool-get page %ud",pgno));
+#ifdef MPOOL_DEBUG
+    err_debug(("mpool-get page %ud",pgno));
+#endif
 
 	/* Check for attempt to retrieve a non-existent page. */
 	if (pgno >= mp->npages) {
@@ -180,12 +184,14 @@ mpool_get(mp, pgno, flags)
 	/* Check for a page that is cached. */
 	if ((bp = mpool_look(mp, pgno)) != NULL) {
         /* IMHO: the code is not necessary */
+#if 0
 #ifdef DEBUG
 		if (bp->flags & MPOOL_PINNED) {
 			(void)fprintf(stderr,
 			    "mpool_get: page %d already pinned\n", bp->pgno);
 			abort();
 		}
+#endif
 #endif
         
 		/*
@@ -258,7 +264,9 @@ mpool_put(mp, page, flags)
 #endif
 	bp = (BKT *)((char *)page - sizeof(BKT));
     
-    //err_debug(("mpool-put page %ud",bp->pgno));
+#ifdef MPOOL_DEBUG
+    err_debug(("mpool-put page %ud",bp->pgno));
+#endif
 
 #ifdef DEBUG
 	if (!(bp->flags & MPOOL_PINNED)) {
@@ -413,9 +421,6 @@ mpool_look(mp, pgno)
 {
 	struct _hqh *head;
 	BKT *bp;
-#ifdef MPOOL_DEBUG
-    err_debug0("look up page %ud in cache: ",pgno); 
-#endif 
 	head = &mp->hqh[HASHKEY(pgno)];
 	for (bp = head->cqh_first; bp != (void *)head; bp = bp->hq.cqe_next)
 		if (bp->pgno == pgno) {
@@ -423,15 +428,16 @@ mpool_look(mp, pgno)
 			++mp->cachehit;
 #endif
 #ifdef MPOOL_DEBUG
-    err_debug(("found"));
+    err_debug(("look up page %ud in cache: found",pgno)); 
 #endif 
 			return (bp);
 		}
 #ifdef STATISTICS
 	++mp->cachemiss;
 #endif
+
 #ifdef MPOOL_DEBUG
-    err_debug(("not found"));
+    err_debug(("look up page %ud in cache: not found",pgno)); 
 #endif 
 	return (NULL);
 }
