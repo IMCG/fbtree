@@ -97,13 +97,13 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 
 		goto success;
 	}
-    /* == Case 2. directly insert if enough room == 
-     * FIXME leaf is always in disk mode here
-     */
+    /* == Case 2. directly insert if enough room == */
     err_debug(("leaf room is enough, insert"));
 
     node_addkey(t,h,key,data,P_INVALID,index,nbytes);
 
+#if 0
+    // NOTE: if you want to use these code, you must modify node_addkey to avoid that h's not updated
     // if the insert position is the leftmost/rightmost, set them   
 	if (t->bt_order == NOT){
 		if (h->nextpg == P_INVALID){
@@ -120,8 +120,9 @@ __bt_put_st(const DB *dbp,DBT *key,	const DBT *data, u_int flags)
 			}
 		}
     }
+#endif
 
-	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
+	//Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 
 success:
 	F_SET(t, B_MODIFIED);

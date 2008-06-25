@@ -22,6 +22,7 @@ clean:
 
 OORG=	-O
 CL=	${CC} -Wall -pg -g -c \
+	-DMPOOL_DEBUG \
 	-D__DBINTERFACE_PRIVATE ${OORG} -I../include -I../linux/include -I../../include
 #-DNTT_DEBUG -DNODE_DEBUG -DBT_PUT_DEBUG -DBT_SPLIT_DEBUG\
 #-DLOG_DEBUG -DNODE_DEBUG -DNTT_DEBUG -DBT_PUT_DEBUG -DBT_SPLIT_DEBUG \

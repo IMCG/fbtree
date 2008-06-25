@@ -109,14 +109,15 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
      * ----
 	 * Insert the new key/data pair into the leaf page.  (Key inserts
 	 * always cause a leaf page to split first.)
-     * XXX: we needn't add log here since leaf is always disk mode, do it later! 
      */
 	h->linp[skip] = h->upper -= ilen;
 	dest = (char *)h + h->upper;
 	WR_BLEAF(dest, key, data, flags)
     if(h->flags & P_LMEM){
-        node_tolog(t,h); 
+        h = node_tolog(t,h); 
     }
+    Mpool_put(t->bt_mp,h,MPOOL_DIRTY);
+
 	/* If the root page was split, make it look right. */
 	if (sp->nid == P_ROOT &&
 	    bt_broot(t, sp, l, r) == RET_ERROR)
@@ -249,12 +250,12 @@ __bt_split_st(BTREE *t, PAGE *sp, const DBT *key, const DBT *data, int flags, si
 			goto err1;
 
         if( h->flags & P_LMEM ){
-            node_tolog(t,h);
+            h = node_tolog(t,h);
         }
+		Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 
 		//Mpool_put(t->bt_mp, lchild, MPOOL_DIRTY);
 		//Mpool_put(t->bt_mp, rchild, MPOOL_DIRTY);
-
         err_debug(("-^End update", parent->pgno)); 
 	}
 
@@ -398,14 +399,16 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
 		tp = h;
         if(r->flags & P_LMEM){
             err_debug(("gen for left")); 
-            node_tolog(t,r);
+            r = node_tolog(t,r);
         }
+		Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
     }
     else{  /* tp==r  */
         if(h->flags & P_LMEM){
             err_debug(("gen for left")); 
-            node_tolog(t,h);
+            h = node_tolog(t,h);
         }
+		Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
     }
 	free(l);
 
@@ -428,7 +431,6 @@ bt_page ( BTREE *t,  PAGE *h, PAGE **lp, PAGE **rp,  indx_t *skip, size_t ilen)
  * Returns:
  *	Pointer to page in which to insert or NULL on error.
  * 
- * @mx XXX not modifed yet
  */
 static PAGE *
 bt_root(t, h, lp, rp, skip, ilen)
@@ -458,13 +460,13 @@ bt_root(t, h, lp, rp, skip, ilen)
 	*lp = l;
 	*rp = r;
 	if (tp == l){
-        if(r->flags & P_LMEM)
-            node_tolog(t,r);
+        if(r->flags & P_LMEM) r = node_tolog(t,r);
+		Mpool_put(t->bt_mp, r, MPOOL_DIRTY);
     }
     else{  /* tp==r  */
         assert(tp==r);
-        if(l->flags & P_LMEM)
-            node_tolog(t,l);
+        if(l->flags & P_LMEM) l = node_tolog(t,l);
+		Mpool_put(t->bt_mp, l, MPOOL_DIRTY);
     }
 
 	return (tp);
@@ -551,7 +553,7 @@ bt_broot(t, h, l, r)
 	h->flags &= ~P_TYPE;
 	h->flags |= P_BINTERNAL;
     if(h->flags & P_LMEM){
-        node_tolog(t,h);
+        h = node_tolog(t,h);
     }
 	Mpool_put(t->bt_mp, h, MPOOL_DIRTY);
 	return (RET_SUCCESS);

@@ -139,12 +139,20 @@ PAGE* read_node(BTREE* t , pgno_t x)
     SectorList* slist=NULL;
     MPOOL* mp= t->bt_mp;
 
+    //NTT_dump();
     entry = NTT_get(x);
     head = &(entry->list);
     if( entry->flags & P_DISK){
-        h = mpool_get(mp,head->pgno,0);
+        i=0;
+        list_for_each_entry(slist , &(head->list) , list ){
+            assert(i==0);
+            err_debug(("read node[%u]-pgno[%u]  in disk mode",x,slist->pgno)); 
+            h = mpool_get(mp,slist->pgno,0);
+            i++;
+        }
     }
     else if(entry->flags & P_LOG){
+        err_debug(("read node[%u] in log mode",x)); 
         INIT_LIST_HEAD(&logCollector.list);
 
         // iterate the list
@@ -152,6 +160,7 @@ PAGE* read_node(BTREE* t , pgno_t x)
 
             // get the PAGE(pgno)
             h = mpool_get(mp,slist->pgno,0);
+            //logpage_dump(h);
             if( h==NULL ){
                 err_dump("can't get page: %s", err_loc);
             }
@@ -180,7 +189,8 @@ PAGE* read_node(BTREE* t , pgno_t x)
         h = NULL;
     }
 
-    if(h!=NULL) switch_node(t,h,READ);
+    //__bt_dpage(h);
+    if(h!=NULL) h = switch_node(t,h,READ);
     return h;
 
 }
@@ -217,7 +227,7 @@ PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op)
         entry->f = (entry->f < 0) ? 0 : entry->f;
         
         if( entry->f > t->C ){
-            //printf("haha");
+            err_debug(("switch node[%u] from DISK to LOG",h->nid)); 
             h = mem2log(t,h);
         }
     }else{ /* current mode: LOG mode */
@@ -231,10 +241,11 @@ PAGE* switch_node(BTREE* t,  PAGE* h, u_int32_t op)
         entry->f = (entry->f < 0) ? 0 : entry->f;
         /* migrate when > C */
         if( entry->f > t->C){
-            //printf("haha");
+            err_debug(("switch node[%u] from LOG to DISK",h->nid)); 
             h = mem2disk(t,h);
         }
     }
+    
 
     return h;
 }
@@ -254,7 +265,7 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
 {
     char * dest=NULL;
 
-    switch_node(t,h,WRITE);
+    h = switch_node(t,h,WRITE);
     if(h->flags & P_BLEAF){
         assert(pgno==P_INVALID);
         if( h->flags & P_DISK){
@@ -284,13 +295,15 @@ void node_addkey(BTREE* t,PAGE* h, const DBT* key, const DBT* data, pgno_t pgno,
 /*
  * generate log entry from a node
  */
-void node_tolog(BTREE* t, PAGE*h)
+PAGE* node_tolog(BTREE* t, PAGE*h)
 {
+    assert(h->flags & P_LMEM);
     h = switch_node( t,h,WRITE | WHOLE_NODE);
     if(h->flags & P_DISK)
-        Mpool_put(t->bt_mp,h, MPOOL_DIRTY);
+        ;//Mpool_put(t->bt_mp,h, MPOOL_DIRTY);
     else
-        mem2log(t,h);
+        h = mem2log(t,h);
+    return h;
 
 }
 /**

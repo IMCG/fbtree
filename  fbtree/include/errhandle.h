@@ -28,7 +28,7 @@ typedef	void	Sigfunc(int);	/* for signal handlers */
 #define	max(a,b)	((a) > (b) ? (a) : (b))
 
 #ifdef TEST_DEBUG
-#define	do_we_log_this(args) (0)
+#define	do_we_log_this(args) (1)
 #define err_debug(args) do{ \
     if(do_we_log_this(__FILE__)){ \
         const char* name = strrchr(__FILE__,'/'); \

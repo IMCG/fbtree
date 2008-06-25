@@ -17,6 +17,7 @@ void NTT_init(){
     for(i=1; i<NTT_MAXSIZE; i++){
         NTT[i].flags = P_NOTUSED;
         NTT[i].logversion = 0;
+        NTT[i].f = 0;
         NTT[i].pg_cnt = 0;
     }
 }
@@ -26,7 +27,7 @@ void NTT_init(){
  */
 NTTEntry* NTT_get(pgno_t pgno){
     //const char* err_loc = "function (NTT_get) in NTT.c";
-    //err_debug1("pgno = %u", pgno);
+    err_debug1("pgno = %u", pgno);
     assert( pgno > 0 && pgno<= NTT_MAXSIZE);
 
     return &NTT[pgno];
@@ -75,14 +76,15 @@ void NTT_new(pgno_t nid, u_int32_t flags){
 void NTT_switch(pgno_t nid){
     NTTEntry * entry = NTT_get(nid);
     NTT_del_list(entry);
-    entry->logversion ++;
     entry->maxSeq = 0;
     entry->pg_cnt = 0;
-    if (entry->flags & P_LOG)
-        entry->flags |= (P_DISK & ~(P_LOG));
+    if (entry->flags & P_LOG){
+        entry->flags = (entry->flags & P_TYPE) | P_DISK;
+        entry->logversion ++;
+    }
     else{
         assert(entry->flags & P_DISK);
-        entry->flags |= (P_LOG & ~(P_DISK));
+        entry->flags = (entry->flags & P_TYPE) | P_LOG;
     }
 }
 

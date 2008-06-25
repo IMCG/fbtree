@@ -39,13 +39,13 @@ static int tmp __P((void));
  */
 static device_config(BTREE* t)
 {
-    double cw; //cost of write per page
-    double cr; //cost of read per page
-    u_int32_t node_size; //size of a node 
-    u_int32_t log_per_page; //max log entries a page can hold 
-    double C; // M1+M2
-   
-
+    int N;
+    t->cw = 100;
+    t->cr = 100;
+    t->node_size = 1;
+    t->log_per_page = (t->bt_psize- BTDATAOFF) / (sizeof(BLOG) -1 + 4 ) ;
+    N = (t->bt_psize-BTDATAOFF) / (sizeof(BINTERNAL)-1 + 4 );
+    t->C = t->cw * ( t->node_size + (0.69*N+1) /t->log_per_page) ;
 }
 /*
  * __BT_OPEN -- Open a btree.
@@ -293,6 +293,7 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 	if (!F_ISSET(t, B_INMEM))
 		mpool_filter(t->bt_mp, __bt_pgin, __bt_pgout, t);
     
+    device_config(t);
     NTT_init(); 
     /* Create a root page if new tree. */
 	if (nroot(t) == RET_ERROR)
@@ -307,7 +308,6 @@ __bt_open(fname, flags, mode, openinfo, dflags)
 		F_SET(t, B_DB_TXN);
 
     logpool_init(t);
-    device_config(t);
     err_debug1("ncache = %d", ncache); 
 	return (dbp);
 
